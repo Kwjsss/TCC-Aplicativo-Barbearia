@@ -64,6 +64,10 @@ class Appointment(BaseModel):
     serviceId: int
     date: str
     time: str
+    status: str = "pending"  # pending, completed, cancelled
+
+class AppointmentStatusUpdate(BaseModel):
+    status: str  # pending, completed, cancelled
 
 class AvailableSlotsRequest(BaseModel):
     date: str
@@ -153,7 +157,8 @@ async def create_appointment(appointment: AppointmentCreate):
     existing = await db.appointments.find_one({
         "date": appointment.date,
         "time": appointment.time,
-        "proId": appointment.proId
+        "proId": appointment.proId,
+        "status": {"$ne": "cancelled"}
     })
     
     if existing:
@@ -174,16 +179,41 @@ async def get_appointments(client: Optional[str] = None, proId: Optional[int] = 
         query["proId"] = proId
     
     appointments = await db.appointments.find(query, {"_id": 0}).to_list(1000)
+    
+    # Add status field if it doesn't exist (for old appointments)
+    for apt in appointments:
+        if "status" not in apt:
+            apt["status"] = "pending"
+    
     return appointments
+
+@api_router.patch("/appointments/{appointment_id}/status", response_model=Appointment)
+async def update_appointment_status(appointment_id: str, update: AppointmentStatusUpdate):
+    """Update appointment status"""
+    
+    if update.status not in ["pending", "completed", "cancelled"]:
+        raise HTTPException(status_code=400, detail="Invalid status")
+    
+    result = await db.appointments.update_one(
+        {"id": appointment_id},
+        {"$set": {"status": update.status}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+    
+    updated = await db.appointments.find_one({"id": appointment_id}, {"_id": 0})
+    return updated
 
 @api_router.post("/appointments/available-slots")
 async def get_available_slots(request: AvailableSlotsRequest):
     """Get available time slots for a specific date and professional"""
     
-    # Get all appointments for this date and professional
+    # Get all appointments for this date and professional (excluding cancelled)
     booked = await db.appointments.find({
         "date": request.date,
-        "proId": request.proId
+        "proId": request.proId,
+        "status": {"$ne": "cancelled"}
     }, {"_id": 0}).to_list(100)
     
     booked_times = [apt["time"] for apt in booked]
@@ -206,14 +236,15 @@ async def get_monthly_report(year: int, month: int):
     # Get all appointments for the specified month
     appointments = await db.appointments.find({}, {"_id": 0}).to_list(10000)
     
-    # Filter by month/year
+    # Filter by month/year and only count completed appointments
     filtered = []
     for apt in appointments:
         try:
             date_parts = apt["date"].split("-")
             apt_year = int(date_parts[0])
             apt_month = int(date_parts[1])
-            if apt_year == year and apt_month == month:
+            status = apt.get("status", "pending")
+            if apt_year == year and apt_month == month and status == "completed":
                 filtered.append(apt)
         except:
             continue
