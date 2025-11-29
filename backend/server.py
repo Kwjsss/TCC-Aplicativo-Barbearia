@@ -219,7 +219,14 @@ async def login(request: LoginRequest):
     elif request.role == "pro":
         # Find by name
         user = await db.professionals.find_one({"name": request.identifier})
-        if not user or not verify_password(request.password, user["password"]):
+        if not user:
+            raise HTTPException(status_code=401, detail="Nome ou senha incorretos")
+        
+        # Check if user has password field (new users) or needs migration (old users)
+        if "password" not in user:
+            raise HTTPException(status_code=401, detail="Conta antiga detectada. Por favor, registre-se novamente.")
+        
+        if not verify_password(request.password, user["password"]):
             raise HTTPException(status_code=401, detail="Nome ou senha incorretos")
         
         return LoginResponse(
