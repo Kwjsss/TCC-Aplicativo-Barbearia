@@ -5,6 +5,9 @@ import { DayPicker } from 'react-day-picker';
 import { format, parseISO, isPast, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { QRCodeSVG } from 'qrcode.react';
+import { Settings } from 'lucide-react';
+import ClientSettings from './components/ClientSettings';
+import ProfessionalSettings from './components/ProfessionalSettings';
 import 'react-day-picker/dist/style.css';
 import '@/App.css';
 
