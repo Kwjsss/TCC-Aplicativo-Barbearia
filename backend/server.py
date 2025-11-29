@@ -435,6 +435,47 @@ async def update_appointment_status(appointment_id: str, update: AppointmentStat
     updated = await db.appointments.find_one({"id": appointment_id}, {"_id": 0})
     return updated
 
+@api_router.patch("/appointments/{appointment_id}/cancel", response_model=Appointment)
+async def cancel_appointment(appointment_id: str, cancel_request: AppointmentCancelRequest):
+    """Cancel appointment (client side) with reason"""
+    
+    appointment = await db.appointments.find_one({"id": appointment_id})
+    if not appointment:
+        raise HTTPException(status_code=404, detail="Agendamento não encontrado")
+    
+    if appointment.get("status") == "completed":
+        raise HTTPException(status_code=400, detail="Não é possível cancelar um agendamento já concluído")
+    
+    result = await db.appointments.update_one(
+        {"id": appointment_id},
+        {"$set": {
+            "status": "cancelled",
+            "cancellationReason": cancel_request.reason
+        }}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Erro ao cancelar agendamento")
+    
+    updated = await db.appointments.find_one({"id": appointment_id}, {"_id": 0})
+    return updated
+
+@api_router.get("/appointments/by-date/{pro_id}/{date}")
+async def get_appointments_by_date(pro_id: int, date: str):
+    """Get all appointments for a specific professional on a specific date"""
+    
+    appointments = await db.appointments.find({
+        "proId": pro_id,
+        "date": date
+    }, {"_id": 0}).to_list(100)
+    
+    # Add status field if it doesn't exist
+    for apt in appointments:
+        if "status" not in apt:
+            apt["status"] = "pending"
+    
+    return appointments
+
 @api_router.post("/appointments/available-slots")
 async def get_available_slots(request: AvailableSlotsRequest):
     """Get available time slots for a specific date and professional"""
