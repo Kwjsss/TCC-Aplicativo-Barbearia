@@ -740,17 +740,65 @@ function ClientView({
         <h4 className="font-semibold mb-2">Histórico</h4>
         <div className="space-y-2">
           {appointments.length === 0 && <p className="text-sm text-gray-500">Nenhum agendamento</p>}
-          {appointments.map((a) => (
-            <div key={a.id} className="flex items-center justify-between p-2 border rounded">
-              <div>
-                <div className="font-medium">{services.find((s) => s.id === a.serviceId)?.name}</div>
-                <div className="text-xs text-gray-500">{formatDateBR(a.date)} • {a.time}</div>
+          {appointments.map((a) => {
+            const service = services.find((s) => s.id === a.serviceId);
+            const isPending = !a.status || a.status === 'pending';
+            const isCancelled = a.status === 'cancelled';
+            
+            return (
+              <div 
+                key={a.id} 
+                className={`flex items-center justify-between p-3 border rounded ${isCancelled ? 'bg-red-50 border-red-200' : 'bg-white'}`}
+              >
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <div className="font-medium">{service?.name}</div>
+                    {isCancelled && (
+                      <span className="text-xs px-2 py-1 rounded bg-red-100 text-red-700">Cancelado</span>
+                    )}
+                    {a.status === 'completed' && (
+                      <span className="text-xs px-2 py-1 rounded bg-green-100 text-green-700">Concluído</span>
+                    )}
+                    {isPending && (
+                      <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700">Pendente</span>
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-500">{formatDateBR(a.date)} • {a.time}</div>
+                  {a.cancellationReason && (
+                    <div className="text-xs text-red-600 mt-1">Motivo: {a.cancellationReason}</div>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-sm font-semibold">{formatBRL(service?.price || 0)}</div>
+                  {isPending && (
+                    <button
+                      onClick={() => setCancelingAppointment({
+                        id: a.id,
+                        serviceName: service?.name,
+                        date: formatDateBR(a.date),
+                        time: a.time
+                      })}
+                      className="text-xs px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                      disabled={loading}
+                    >
+                      Cancelar
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="text-sm">{formatBRL(services.find((s) => s.id === a.serviceId)?.price || 0)}</div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
+
+      {cancelingAppointment && (
+        <CancelModal
+          appointment={cancelingAppointment}
+          onConfirm={handleCancelConfirm}
+          onClose={() => setCancelingAppointment(null)}
+          loading={loading}
+        />
+      )}
     </div>
   );
 }
