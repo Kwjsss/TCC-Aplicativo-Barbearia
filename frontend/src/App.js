@@ -878,8 +878,75 @@ function ProfessionalView({ userName, userId, services, updateService, appointme
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="p-4 border rounded-lg">
-          <h4 className="font-semibold mb-2">Agenda (Próximos agendamentos)</h4>
-          <div className="space-y-2 max-h-96 overflow-y-auto">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="font-semibold">Agenda</h4>
+            <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('day')}
+                className={`px-3 py-1 text-xs rounded ${viewMode === 'day' ? 'bg-blue-500 text-white' : 'text-gray-600'}`}
+              >
+                Dia
+              </button>
+              <button
+                onClick={() => setViewMode('month')}
+                className={`px-3 py-1 text-xs rounded ${viewMode === 'month' ? 'bg-blue-500 text-white' : 'text-gray-600'}`}
+              >
+                Mês
+              </button>
+            </div>
+          </div>
+
+          {viewMode === 'day' ? (
+            <>
+              <div className="mb-3">
+                <DayPicker
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => date && setSelectedDate(date)}
+                  locale={ptBR}
+                  className="rdp-small"
+                />
+              </div>
+              <div className="border-t pt-3">
+                <h5 className="font-medium mb-2">{format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</h5>
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {dailyAppointments.length === 0 && (
+                    <p className="text-sm text-gray-500 text-center py-4">Sem agendamentos neste dia</p>
+                  )}
+                  {dailyAppointments.map((a) => (
+                    <div key={a.id} className={`flex flex-col p-3 rounded ${getStatusColor(a)}`}>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="font-medium">{a.client}</div>
+                          <div className="text-xs text-gray-500">{a.time}</div>
+                          {a.clientPhone && (
+                            <div className="text-xs text-gray-600 flex items-center gap-1 mt-1">
+                              <span>📞</span> {a.clientPhone}
+                            </div>
+                          )}
+                          <div className="text-xs text-gray-600 mt-1">{services.find((s) => s.id === a.serviceId)?.name}</div>
+                          {a.cancellationReason && (
+                            <div className="text-xs text-red-600 mt-1 italic">Motivo: {a.cancellationReason}</div>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-semibold">{formatBRL(services.find((s) => s.id === a.serviceId)?.price || 0)}</div>
+                          <div className="mt-1">{getStatusBadge(a)}</div>
+                        </div>
+                      </div>
+                      {getAppointmentStatus(a) === 'pending' && (
+                        <div className="flex gap-1 mt-2">
+                          <button onClick={() => updateAppointmentStatus(a.id, 'completed')} className="text-xs px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600" disabled={loading}>Concluir</button>
+                          <button onClick={() => updateAppointmentStatus(a.id, 'cancelled')} className="text-xs px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600" disabled={loading}>Cancelar</button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-2 max-h-96 overflow-y-auto">
             {appointments.length === 0 && <p className="text-sm text-gray-500">Sem agendamentos</p>}
             {appointments.slice(0, 20).map((a) => (
               <div key={a.id} className={`flex flex-col p-3 rounded ${getStatusColor(a)}`}>
