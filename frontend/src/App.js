@@ -274,6 +274,7 @@ function MainApp() {
             bookedSlots={bookedSlots}
             appointments={appointments}
             bookAppointment={bookAppointment}
+            cancelAppointment={cancelAppointment}
             formatBRL={formatBRL}
             formatDateBR={formatDateBR}
             loading={loading}
