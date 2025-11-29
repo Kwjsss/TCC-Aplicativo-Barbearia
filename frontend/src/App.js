@@ -645,10 +645,18 @@ function ClientView({
   userName, services, professionals, selectedService, setSelectedService,
   selectedPro, setSelectedPro, selectedDate, setSelectedDate, selectedTime,
   setSelectedTime, SLOTS, bookedSlots, appointments, bookAppointment,
-  formatBRL, formatDateBR, loading
+  cancelAppointment, formatBRL, formatDateBR, loading
 }) {
   const svc = services.find((s) => s.id === Number(selectedService));
   const [showCalendar, setShowCalendar] = useState(false);
+  const [cancelingAppointment, setCancelingAppointment] = useState(null);
+
+  async function handleCancelConfirm(appointmentId, reason) {
+    const success = await cancelAppointment(appointmentId, reason);
+    if (success) {
+      setCancelingAppointment(null);
+    }
+  }
 
   return (
     <div className="grid gap-6">
