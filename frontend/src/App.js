@@ -198,6 +198,21 @@ function MainApp() {
     }
   }
 
+  async function cancelAppointment(appointmentId, reason) {
+    try {
+      setLoading(true);
+      await axios.patch(`${API}/appointments/${appointmentId}/cancel`, { reason });
+      await loadAppointments();
+      alert('Agendamento cancelado com sucesso!');
+      return true;
+    } catch (error) {
+      alert(error.response?.data?.detail || 'Erro ao cancelar agendamento');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function updateService(updated) {
     try {
       setLoading(true);
