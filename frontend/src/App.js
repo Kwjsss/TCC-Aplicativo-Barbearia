@@ -279,6 +279,14 @@ function MainApp() {
             getAppointmentStatus={getAppointmentStatus}
           />
         )}
+
+        {/* Settings Modal */}
+        {showSettings && role === 'client' && (
+          <ClientSettings userId={userId} onUpdate={handleProfileUpdate} onClose={() => setShowSettings(false)} />
+        )}
+        {showSettings && role === 'pro' && (
+          <ProfessionalSettings userId={userId} onUpdate={handleProfileUpdate} onClose={() => setShowSettings(false)} />
+        )}
       </div>
     </div>
   );
