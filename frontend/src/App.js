@@ -149,12 +149,29 @@ function MainApp() {
     setRole(data.role);
     setUserName(data.userName);
     setUserId(data.userId);
+    await loadUserProfile(data.userId, data.role);
+  }
+
+  async function loadUserProfile(id, userRole) {
+    try {
+      const endpoint = userRole === 'client' ? `clients/profile/${id}` : `professionals/profile/${id}`;
+      const res = await axios.get(`${API}/${endpoint}`);
+      setUserPhoto(res.data.photo || '');
+    } catch (error) {
+      console.error('Error loading profile:', error);
+    }
+  }
+
+  async function handleProfileUpdate() {
+    await loadUserProfile(userId, role);
+    setShowSettings(false);
   }
 
   function logout() {
     setRole(null);
     setUserName('');
     setUserId('');
+    setUserPhoto('');
     setAppointments([]);
   }
 
