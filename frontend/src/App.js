@@ -495,7 +495,7 @@ function PublicBooking() {
   );
 }
 
-function Header({ role, logout }) {
+function Header({ role, userName, userPhoto, logout, onSettings }) {
   return (
     <div className="flex items-center justify-between mb-4">
       <div className="flex items-center gap-3">
@@ -506,7 +506,24 @@ function Header({ role, logout }) {
         </div>
       </div>
       <div className="flex items-center gap-3">
-        {role && <button onClick={logout} className="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50">Sair</button>}
+        {role && (
+          <>
+            <div className="flex items-center gap-2">
+              {userPhoto ? (
+                <img src={userPhoto} alt={userName} className="w-8 h-8 rounded-full object-cover" onError={(e) => e.target.src = ''} />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-bold">
+                  {userName?.[0]}
+                </div>
+              )}
+              <span className="text-sm font-medium hidden md:block">{userName}</span>
+            </div>
+            <button onClick={onSettings} className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50" title="Configurações">
+              <Settings className="w-4 h-4" />
+            </button>
+            <button onClick={logout} className="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50">Sair</button>
+          </>
+        )}
       </div>
     </div>
   );
