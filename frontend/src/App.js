@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { DayPicker } from 'react-day-picker';
+import { format, parseISO, isPast, isToday } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import 'react-day-picker/dist/style.css';
 import '@/App.css';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -8,6 +12,34 @@ const API = `${BACKEND_URL}/api`;
 // Utility: format currency BRL
 const formatBRL = (v) =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+// Utility: format date to Brazilian format
+const formatDateBR = (dateStr) => {
+  try {
+    return format(parseISO(dateStr), 'dd/MM/yyyy', { locale: ptBR });
+  } catch {
+    return dateStr;
+  }
+};
+
+// Utility: check if appointment is in the past
+const getAppointmentStatus = (apt) => {
+  // If status is explicitly set, use it
+  if (apt.status && apt.status !== 'pending') {
+    return apt.status;
+  }
+  
+  // Otherwise, determine by date
+  try {
+    const aptDate = parseISO(apt.date);
+    if (isPast(aptDate) && !isToday(aptDate)) {
+      return 'completed';
+    }
+    return 'pending';
+  } catch {
+    return 'pending';
+  }
+};
 
 // Utility: create time slots for a day (09:00 - 18:00 every 30min)
 function generateSlots() {
@@ -179,6 +211,22 @@ export default function App() {
     }
   }
 
+  // Update appointment status
+  async function updateAppointmentStatus(appointmentId, newStatus) {
+    try {
+      setLoading(true);
+      await axios.patch(`${API}/appointments/${appointmentId}/status`, {
+        status: newStatus
+      });
+      await loadAppointments();
+    } catch (error) {
+      console.error('Update status error:', error);
+      alert('Erro ao atualizar status');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   // Reports (monthly)
   async function monthlyReport(year, month) {
     try {
@@ -217,6 +265,7 @@ export default function App() {
             appointments={appointments}
             bookAppointment={bookAppointment}
             formatBRL={formatBRL}
+            formatDateBR={formatDateBR}
             loading={loading}
           />
         )}
@@ -230,7 +279,10 @@ export default function App() {
             professionals={professionals}
             monthlyReport={monthlyReport}
             formatBRL={formatBRL}
+            formatDateBR={formatDateBR}
             loading={loading}
+            updateAppointmentStatus={updateAppointmentStatus}
+            getAppointmentStatus={getAppointmentStatus}
           />
         )}
       </div>
@@ -252,7 +304,7 @@ function Header({ role, logout }) {
       </div>
       <div className="flex items-center gap-3">
         {role && (
-          <button onClick={logout} className="px-3 py-2 rounded-lg border border-gray-200 text-sm">Sair</button>
+          <button onClick={logout} className="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50">Sair</button>
         )}
       </div>
     </div>
@@ -319,9 +371,21 @@ function ClientView({
   appointments,
   bookAppointment,
   formatBRL,
+  formatDateBR,
   loading
 }) {
   const svc = services.find((s) => s.id === Number(selectedService));
+  const [showCalendar, setShowCalendar] = useState(false);
+  
+  const handleDateSelect = (date) => {
+    if (date) {
+      const isoDate = format(date, 'yyyy-MM-dd');
+      setSelectedDate(isoDate);
+      setSelectedTime(null);
+      setShowCalendar(false);
+    }
+  };
+
   return (
     <div className="grid gap-6">
       <div className="text-center">
@@ -362,14 +426,35 @@ function ClientView({
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="p-4 border rounded-lg">
+        <div className="p-4 border rounded-lg relative">
           <h4 className="font-semibold mb-2">Escolha a data</h4>
-          <input className="w-full p-2 border rounded" type="date" value={selectedDate} onChange={(e) => { setSelectedDate(e.target.value); setSelectedTime(null); }} />
+          <button 
+            onClick={() => setShowCalendar(!showCalendar)}
+            className="w-full p-3 border rounded-lg text-left hover:bg-gray-50 flex items-center justify-between"
+          >
+            <span>{formatDateBR(selectedDate)}</span>
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </button>
+          
+          {showCalendar && (
+            <div className="absolute z-10 mt-2 bg-white border rounded-lg shadow-lg p-2">
+              <DayPicker
+                mode="single"
+                selected={parseISO(selectedDate)}
+                onSelect={handleDateSelect}
+                locale={ptBR}
+                disabled={{ before: new Date() }}
+                className="rdp-small"
+              />
+            </div>
+          )}
         </div>
 
         <div className="p-4 border rounded-lg">
           <h4 className="font-semibold mb-2">Horários disponíveis</h4>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-4 gap-2 max-h-60 overflow-y-auto">
             {SLOTS.map((t) => {
               const taken = bookedSlots.includes(t);
               return (
@@ -398,7 +483,7 @@ function ClientView({
           <h4 className="font-semibold">Resumo</h4>
           <p className="text-sm">Serviço: {svc?.name}</p>
           <p className="text-sm">Profissional: {professionals.find((p) => p.id === Number(selectedPro))?.name}</p>
-          <p className="text-sm">Data: {selectedDate}</p>
+          <p className="text-sm">Data: {formatDateBR(selectedDate)}</p>
           <p className="text-sm">Horário: {selectedTime || '—'}</p>
           <p className="text-sm">Valor: {svc ? formatBRL(svc.price) : '—'}</p>
         </div>
@@ -407,7 +492,7 @@ function ClientView({
           <button 
             onClick={bookAppointment} 
             disabled={loading || !selectedTime}
-            className="w-full p-3 bg-blue-600 text-white rounded-lg font-semibold disabled:opacity-50"
+            className="w-full p-3 bg-blue-600 text-white rounded-lg font-semibold disabled:opacity-50 hover:bg-blue-700"
           >
             {loading ? 'Aguarde...' : 'Confirmar'}
           </button>
@@ -422,7 +507,7 @@ function ClientView({
             <div key={a.id} className="flex items-center justify-between p-2 border rounded">
               <div>
                 <div className="font-medium">{services.find((s) => s.id === a.serviceId)?.name}</div>
-                <div className="text-xs text-gray-500">{a.date} • {a.time}</div>
+                <div className="text-xs text-gray-500">{formatDateBR(a.date)} • {a.time}</div>
               </div>
               <div className="text-sm">{formatBRL(services.find((s) => s.id === a.serviceId)?.price || 0)}</div>
             </div>
@@ -433,10 +518,22 @@ function ClientView({
   );
 }
 
-function ProfessionalView({ userName, services, updateService, appointments, professionals, monthlyReport, formatBRL, loading }) {
+function ProfessionalView({ 
+  userName, 
+  services, 
+  updateService, 
+  appointments, 
+  professionals, 
+  monthlyReport, 
+  formatBRL, 
+  formatDateBR,
+  loading,
+  updateAppointmentStatus,
+  getAppointmentStatus
+}) {
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; // YYYY-MM
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   });
 
   const [editingService, setEditingService] = useState(null);
@@ -452,6 +549,32 @@ function ProfessionalView({ userName, services, updateService, appointments, pro
     setReport(data);
   }
 
+  const getStatusColor = (apt) => {
+    const status = getAppointmentStatus(apt);
+    switch(status) {
+      case 'completed':
+        return 'border-l-4 border-green-500 bg-green-50';
+      case 'cancelled':
+        return 'border-l-4 border-red-500 bg-red-50';
+      case 'pending':
+      default:
+        return 'border-l-4 border-blue-500 bg-blue-50';
+    }
+  };
+
+  const getStatusBadge = (apt) => {
+    const status = getAppointmentStatus(apt);
+    switch(status) {
+      case 'completed':
+        return <span className="text-xs px-2 py-1 rounded bg-green-100 text-green-700">Concluído</span>;
+      case 'cancelled':
+        return <span className="text-xs px-2 py-1 rounded bg-red-100 text-red-700">Cancelado</span>;
+      case 'pending':
+      default:
+        return <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700">Pendente</span>;
+    }
+  };
+
   return (
     <div className="grid gap-6">
       <div className="text-center">
@@ -465,13 +588,38 @@ function ProfessionalView({ userName, services, updateService, appointments, pro
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {appointments.length === 0 && <p className="text-sm text-gray-500">Sem agendamentos</p>}
             {appointments.slice(0, 20).map((a) => (
-              <div key={a.id} className="flex items-center justify-between p-2 border rounded">
-                <div>
-                  <div className="font-medium">{a.client}</div>
-                  <div className="text-xs text-gray-500">{a.date} • {a.time}</div>
-                  <div className="text-xs text-gray-400">{services.find((s) => s.id === a.serviceId)?.name}</div>
+              <div key={a.id} className={`flex flex-col p-3 rounded ${getStatusColor(a)}`}>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="font-medium">{a.client}</div>
+                    <div className="text-xs text-gray-500">{formatDateBR(a.date)} • {a.time}</div>
+                    <div className="text-xs text-gray-600 mt-1">{services.find((s) => s.id === a.serviceId)?.name}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-semibold">{formatBRL(services.find((s) => s.id === a.serviceId)?.price || 0)}</div>
+                    <div className="mt-1">{getStatusBadge(a)}</div>
+                  </div>
                 </div>
-                <div className="text-sm">{formatBRL(services.find((s) => s.id === a.serviceId)?.price || 0)}</div>
+                <div className="flex gap-1 mt-2">
+                  {getAppointmentStatus(a) === 'pending' && (
+                    <>
+                      <button
+                        onClick={() => updateAppointmentStatus(a.id, 'completed')}
+                        className="text-xs px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600"
+                        disabled={loading}
+                      >
+                        Concluir
+                      </button>
+                      <button
+                        onClick={() => updateAppointmentStatus(a.id, 'cancelled')}
+                        className="text-xs px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                        disabled={loading}
+                      >
+                        Cancelar
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -525,13 +673,13 @@ function ProfessionalView({ userName, services, updateService, appointments, pro
                         setEditingService(null); 
                       }} 
                       disabled={loading}
-                      className="px-3 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
+                      className="px-3 py-2 bg-blue-600 text-white rounded disabled:opacity-50 hover:bg-blue-700"
                     >
                       Salvar
                     </button>
                     <button 
                       onClick={() => setEditingService(null)} 
-                      className="px-3 py-2 border rounded"
+                      className="px-3 py-2 border rounded hover:bg-gray-50"
                     >
                       Cancelar
                     </button>
@@ -556,7 +704,7 @@ function ProfessionalView({ userName, services, updateService, appointments, pro
         {report ? (
           <div className="grid gap-2">
             <div className="p-3 border rounded bg-blue-50">
-              <div className="text-sm text-gray-600">Atendimentos</div>
+              <div className="text-sm text-gray-600">Atendimentos Concluídos</div>
               <div className="font-semibold text-xl">{report.totalAttendance}</div>
             </div>
             <div className="p-3 border rounded bg-green-50">

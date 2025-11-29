@@ -39,3 +39,32 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* Custom styles for react-day-picker */
+.rdp-small {
+  font-size: 0.875rem;
+}
+
+.rdp-small .rdp-month {
+  width: 100%;
+}
+
+.rdp-small .rdp-day {
+  width: 2rem;
+  height: 2rem;
+}
+
+.rdp {
+  --rdp-cell-size: 40px;
+  --rdp-accent-color: #3b82f6;
+  --rdp-background-color: #e0f2fe;
+}
+
+.rdp-day_selected:not([disabled]) { 
+  background-color: var(--rdp-accent-color);
+  color: white;
+}
+
+.rdp-day_selected:hover:not([disabled]) {
+  background-color: #2563eb;
+}
