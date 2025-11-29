@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
 import uuid
+import bcrypt
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -26,14 +27,26 @@ api_router = APIRouter(prefix="/api")
 
 # -------------------- Models --------------------
 
-class LoginRequest(BaseModel):
+class ClientRegister(BaseModel):
     name: str
+    email: str
+    phone: str
+    password: str
+
+class ProfessionalRegister(BaseModel):
+    name: str
+    password: str
+
+class LoginRequest(BaseModel):
+    identifier: str  # email for client, name for professional
+    password: str
     role: str  # 'client' or 'pro'
 
 class LoginResponse(BaseModel):
     success: bool
     userName: str
     role: str
+    userId: str
 
 class Service(BaseModel):
     id: int
@@ -56,6 +69,8 @@ class AppointmentCreate(BaseModel):
     serviceId: int
     date: str  # ISO format YYYY-MM-DD
     time: str  # HH:MM
+    clientEmail: Optional[str] = None
+    clientPhone: Optional[str] = None
 
 class Appointment(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -65,6 +80,8 @@ class Appointment(BaseModel):
     date: str
     time: str
     status: str = "pending"  # pending, completed, cancelled
+    clientEmail: Optional[str] = None
+    clientPhone: Optional[str] = None
 
 class AppointmentStatusUpdate(BaseModel):
     status: str  # pending, completed, cancelled
@@ -77,6 +94,20 @@ class MonthlyReport(BaseModel):
     totalAttendance: int
     totalRevenue: float
     servicesCount: dict
+
+class PublicBookingData(BaseModel):
+    professional: Professional
+    services: List[Service]
+
+# -------------------- Helper Functions --------------------
+
+def hash_password(password: str) -> str:
+    """Hash a password using bcrypt"""
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a password against its hash"""
+    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
 
 # -------------------- Initialize Data --------------------
 
@@ -97,9 +128,10 @@ async def initialize_data():
     # Check if professionals exist
     professionals_count = await db.professionals.count_documents({})
     if professionals_count == 0:
+        # Create default professionals with hashed passwords
         professionals = [
-            {"id": 1, "name": "João"},
-            {"id": 2, "name": "Carlos"}
+            {"id": 1, "name": "João", "password": hash_password("123456")},
+            {"id": 2, "name": "Carlos", "password": hash_password("123456")}
         ]
         await db.professionals.insert_many(professionals)
         logging.info("Professionals initialized")
@@ -110,14 +142,95 @@ async def startup_event():
 
 # -------------------- Routes --------------------
 
-@api_router.post("/auth/login", response_model=LoginResponse)
-async def login(request: LoginRequest):
-    """Simple login - just returns the user info"""
+@api_router.post("/auth/register/client")
+async def register_client(client: ClientRegister):
+    """Register a new client"""
+    
+    # Check if email already exists
+    existing = await db.clients.find_one({"email": client.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email já cadastrado")
+    
+    # Create client with hashed password
+    client_id = str(uuid.uuid4())
+    client_doc = {
+        "id": client_id,
+        "name": client.name,
+        "email": client.email,
+        "phone": client.phone,
+        "password": hash_password(client.password)
+    }
+    
+    await db.clients.insert_one(client_doc)
+    
     return LoginResponse(
         success=True,
-        userName=request.name,
-        role=request.role
+        userName=client.name,
+        role="client",
+        userId=client_id
     )
+
+@api_router.post("/auth/register/professional")
+async def register_professional(pro: ProfessionalRegister):
+    """Register a new professional"""
+    
+    # Check if name already exists
+    existing = await db.professionals.find_one({"name": pro.name})
+    if existing:
+        raise HTTPException(status_code=400, detail="Nome já cadastrado")
+    
+    # Get next ID
+    max_pro = await db.professionals.find_one(sort=[("id", -1)])
+    next_id = (max_pro["id"] + 1) if max_pro else 1
+    
+    # Create professional with hashed password
+    pro_doc = {
+        "id": next_id,
+        "name": pro.name,
+        "password": hash_password(pro.password)
+    }
+    
+    await db.professionals.insert_one(pro_doc)
+    
+    return LoginResponse(
+        success=True,
+        userName=pro.name,
+        role="pro",
+        userId=str(next_id)
+    )
+
+@api_router.post("/auth/login", response_model=LoginResponse)
+async def login(request: LoginRequest):
+    """Login for both clients and professionals"""
+    
+    if request.role == "client":
+        # Find by email
+        user = await db.clients.find_one({"email": request.identifier})
+        if not user or not verify_password(request.password, user["password"]):
+            raise HTTPException(status_code=401, detail="Email ou senha incorretos")
+        
+        return LoginResponse(
+            success=True,
+            userName=user["name"],
+            role="client",
+            userId=user["id"]
+        )
+    
+    elif request.role == "pro":
+        # Find by name
+        user = await db.professionals.find_one({"name": request.identifier})
+        if not user or not verify_password(request.password, user["password"]):
+            raise HTTPException(status_code=401, detail="Nome ou senha incorretos")
+        
+        return LoginResponse(
+            success=True,
+            userName=user["name"],
+            role="pro",
+            userId=str(user["id"])
+        )
+    
+    else:
+        raise HTTPException(status_code=400, detail="Tipo de usuário inválido")
 
 @api_router.get("/services", response_model=List[Service])
 async def get_services():
@@ -145,9 +258,26 @@ async def update_service(service_id: int, update: ServiceUpdate):
 
 @api_router.get("/professionals", response_model=List[Professional])
 async def get_professionals():
-    """Get all professionals"""
-    professionals = await db.professionals.find({}, {"_id": 0}).to_list(100)
+    """Get all professionals (without passwords)"""
+    professionals = await db.professionals.find({}, {"_id": 0, "password": 0}).to_list(100)
     return professionals
+
+@api_router.get("/public/book/{pro_id}", response_model=PublicBookingData)
+async def get_public_booking_data(pro_id: int):
+    """Get data for public booking page (no authentication needed)"""
+    
+    # Get professional
+    professional = await db.professionals.find_one({"id": pro_id}, {"_id": 0, "password": 0})
+    if not professional:
+        raise HTTPException(status_code=404, detail="Profissional não encontrado")
+    
+    # Get services
+    services = await db.services.find({}, {"_id": 0}).to_list(100)
+    
+    return PublicBookingData(
+        professional=Professional(**professional),
+        services=[Service(**s) for s in services]
+    )
 
 @api_router.post("/appointments", response_model=Appointment)
 async def create_appointment(appointment: AppointmentCreate):
@@ -162,7 +292,7 @@ async def create_appointment(appointment: AppointmentCreate):
     })
     
     if existing:
-        raise HTTPException(status_code=400, detail="Time slot already booked")
+        raise HTTPException(status_code=400, detail="Horário já reservado")
     
     new_appointment = Appointment(**appointment.model_dump())
     await db.appointments.insert_one(new_appointment.model_dump())
@@ -192,7 +322,7 @@ async def update_appointment_status(appointment_id: str, update: AppointmentStat
     """Update appointment status"""
     
     if update.status not in ["pending", "completed", "cancelled"]:
-        raise HTTPException(status_code=400, detail="Invalid status")
+        raise HTTPException(status_code=400, detail="Status inválido")
     
     result = await db.appointments.update_one(
         {"id": appointment_id},
@@ -200,7 +330,7 @@ async def update_appointment_status(appointment_id: str, update: AppointmentStat
     )
     
     if result.modified_count == 0:
-        raise HTTPException(status_code=404, detail="Appointment not found")
+        raise HTTPException(status_code=404, detail="Agendamento não encontrado")
     
     updated = await db.appointments.find_one({"id": appointment_id}, {"_id": 0})
     return updated
