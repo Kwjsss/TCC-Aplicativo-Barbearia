@@ -802,6 +802,11 @@ function ProfessionalView({ userName, userId, services, updateService, appointme
                   <div className="flex-1">
                     <div className="font-medium">{a.client}</div>
                     <div className="text-xs text-gray-500">{formatDateBR(a.date)} • {a.time}</div>
+                    {a.clientPhone && (
+                      <div className="text-xs text-gray-600 flex items-center gap-1 mt-1">
+                        <span>📞</span> {a.clientPhone}
+                      </div>
+                    )}
                     <div className="text-xs text-gray-600 mt-1">{services.find((s) => s.id === a.serviceId)?.name}</div>
                   </div>
                   <div className="text-right">
