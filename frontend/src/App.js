@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { BrowserRouter, Routes, Route, useParams, useNavigate } from 'react-router-dom';
 import { DayPicker } from 'react-day-picker';
 import { format, parseISO, isPast, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { QRCodeSVG } from 'qrcode.react';
 import 'react-day-picker/dist/style.css';
 import '@/App.css';
 
@@ -24,12 +26,9 @@ const formatDateBR = (dateStr) => {
 
 // Utility: check if appointment is in the past
 const getAppointmentStatus = (apt) => {
-  // If status is explicitly set, use it
   if (apt.status && apt.status !== 'pending') {
     return apt.status;
   }
-  
-  // Otherwise, determine by date
   try {
     const aptDate = parseISO(apt.date);
     if (isPast(aptDate) && !isToday(aptDate)) {
@@ -41,12 +40,10 @@ const getAppointmentStatus = (apt) => {
   }
 };
 
-// Utility: create time slots for a day (09:00 - 18:00 every 30min)
+// Utility: create time slots
 function generateSlots() {
   const slots = [];
-  const start = 9 * 60; // minutes
-  const end = 18 * 60;
-  for (let t = start; t < end; t += 30) {
+  for (let t = 9 * 60; t < 18 * 60; t += 30) {
     const hh = String(Math.floor(t / 60)).padStart(2, '0');
     const mm = String(t % 60).padStart(2, '0');
     slots.push(`${hh}:${mm}`);
@@ -57,38 +54,41 @@ function generateSlots() {
 const SLOTS = generateSlots();
 
 function todayISO() {
-  const d = new Date();
-  return d.toISOString().split('T')[0];
+  return new Date().toISOString().split('T')[0];
 }
 
 export default function App() {
-  // Simple auth state
-  const [role, setRole] = useState(null); // 'client' | 'pro'
-  const [userName, setUserName] = useState('');
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<MainApp />} />
+        <Route path="/book/:proId" element={<PublicBooking />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
 
-  // Data
+function MainApp() {
+  const [role, setRole] = useState(null);
+  const [userName, setUserName] = useState('');
+  const [userId, setUserId] = useState('');
   const [services, setServices] = useState([]);
   const [professionals, setProfessionals] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(false);
-
-  // Client booking state
   const [selectedService, setSelectedService] = useState(null);
   const [selectedPro, setSelectedPro] = useState(null);
   const [selectedDate, setSelectedDate] = useState(todayISO());
   const [selectedTime, setSelectedTime] = useState(null);
   const [bookedSlots, setBookedSlots] = useState([]);
 
-  // Fetch initial data
   useEffect(() => {
     loadServices();
     loadProfessionals();
   }, []);
 
   useEffect(() => {
-    if (role) {
-      loadAppointments();
-    }
+    if (role) loadAppointments();
   }, [role, userName]);
 
   useEffect(() => {
@@ -96,11 +96,8 @@ export default function App() {
     if (professionals.length && !selectedPro) setSelectedPro(professionals[0]?.id);
   }, [services, professionals]);
 
-  // Load available slots when date or pro changes
   useEffect(() => {
-    if (selectedDate && selectedPro) {
-      loadAvailableSlots();
-    }
+    if (selectedDate && selectedPro) loadAvailableSlots();
   }, [selectedDate, selectedPro]);
 
   async function loadServices() {
@@ -143,57 +140,41 @@ export default function App() {
     }
   }
 
-  // Auth handlers
-  async function loginAs(roleToUse, name) {
-    try {
-      setLoading(true);
-      await axios.post(`${API}/auth/login`, {
-        name: name || 'User',
-        role: roleToUse
-      });
-      setRole(roleToUse);
-      setUserName(name || 'User');
-    } catch (error) {
-      console.error('Login error:', error);
-      alert('Erro ao fazer login');
-    } finally {
-      setLoading(false);
-    }
+  async function handleAuth(data) {
+    setRole(data.role);
+    setUserName(data.userName);
+    setUserId(data.userId);
   }
 
   function logout() {
     setRole(null);
     setUserName('');
+    setUserId('');
     setAppointments([]);
   }
 
-  // Booking handler (client)
   async function bookAppointment() {
     if (!selectedTime) return alert('Escolha um horário.');
-    
     try {
       setLoading(true);
       const res = await axios.post(`${API}/appointments`, {
-        client: userName || 'Cliente',
+        client: userName,
         proId: Number(selectedPro),
         serviceId: Number(selectedService),
         date: selectedDate,
         time: selectedTime
       });
-      
       setAppointments([res.data, ...appointments]);
       setSelectedTime(null);
       await loadAvailableSlots();
       alert('Agendamento confirmado!');
     } catch (error) {
-      console.error('Booking error:', error);
       alert(error.response?.data?.detail || 'Erro ao agendar');
     } finally {
       setLoading(false);
     }
   }
 
-  // Professional: set service price/duration
   async function updateService(updated) {
     try {
       setLoading(true);
@@ -204,36 +185,29 @@ export default function App() {
       });
       await loadServices();
     } catch (error) {
-      console.error('Update service error:', error);
       alert('Erro ao atualizar serviço');
     } finally {
       setLoading(false);
     }
   }
 
-  // Update appointment status
   async function updateAppointmentStatus(appointmentId, newStatus) {
     try {
       setLoading(true);
-      await axios.patch(`${API}/appointments/${appointmentId}/status`, {
-        status: newStatus
-      });
+      await axios.patch(`${API}/appointments/${appointmentId}/status`, { status: newStatus });
       await loadAppointments();
     } catch (error) {
-      console.error('Update status error:', error);
       alert('Erro ao atualizar status');
     } finally {
       setLoading(false);
     }
   }
 
-  // Reports (monthly)
   async function monthlyReport(year, month) {
     try {
       const res = await axios.get(`${API}/reports/monthly/${year}/${month}`);
       return res.data;
     } catch (error) {
-      console.error('Report error:', error);
       return { totalAttendance: 0, totalRevenue: 0, servicesCount: {} };
     }
   }
@@ -243,9 +217,7 @@ export default function App() {
       <div className="w-full max-w-4xl shadow-lg rounded-2xl p-4 md:p-8 bg-white">
         <Header role={role} logout={logout} />
 
-        {!role && (
-          <Auth onLogin={loginAs} loading={loading} />
-        )}
+        {!role && <Auth onAuth={handleAuth} loading={loading} setLoading={setLoading} />}
 
         {role === 'client' && (
           <ClientView
@@ -273,10 +245,10 @@ export default function App() {
         {role === 'pro' && (
           <ProfessionalView
             userName={userName}
+            userId={userId}
             services={services}
             updateService={updateService}
             appointments={appointments}
-            professionals={professionals}
             monthlyReport={monthlyReport}
             formatBRL={formatBRL}
             formatDateBR={formatDateBR}
@@ -290,7 +262,208 @@ export default function App() {
   );
 }
 
-// -------------------- Subcomponents --------------------
+// Public booking page
+function PublicBooking() {
+  const { proId } = useParams();
+  const [professional, setProfessional] = useState(null);
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedService, setSelectedService] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(todayISO());
+  const [selectedTime, setSelectedTime] = useState(null);
+  const [bookedSlots, setBookedSlots] = useState([]);
+  const [clientName, setClientName] = useState('');
+  const [clientEmail, setClientEmail] = useState('');
+  const [clientPhone, setClientPhone] = useState('');
+  const [showCalendar, setShowCalendar] = useState(false);
+
+  useEffect(() => {
+    loadBookingData();
+  }, [proId]);
+
+  useEffect(() => {
+    if (selectedDate && proId) loadAvailableSlots();
+  }, [selectedDate, proId]);
+
+  async function loadBookingData() {
+    try {
+      const res = await axios.get(`${API}/public/book/${proId}`);
+      setProfessional(res.data.professional);
+      setServices(res.data.services);
+      if (res.data.services.length) setSelectedService(res.data.services[0].id);
+    } catch (error) {
+      alert('Profissional não encontrado');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadAvailableSlots() {
+    try {
+      const res = await axios.post(`${API}/appointments/available-slots`, {
+        date: selectedDate,
+        proId: Number(proId)
+      });
+      setBookedSlots(res.data.bookedSlots || []);
+    } catch (error) {
+      console.error('Error loading slots:', error);
+    }
+  }
+
+  async function handleBooking() {
+    if (!clientName || !clientEmail || !clientPhone) {
+      return alert('Preencha todos os campos');
+    }
+    if (!selectedTime) return alert('Escolha um horário.');
+
+    try {
+      setLoading(true);
+      await axios.post(`${API}/appointments`, {
+        client: clientName,
+        proId: Number(proId),
+        serviceId: Number(selectedService),
+        date: selectedDate,
+        time: selectedTime,
+        clientEmail,
+        clientPhone
+      });
+      alert('Agendamento confirmado! Entraremos em contato.');
+      setClientName('');
+      setClientEmail('');
+      setClientPhone('');
+      setSelectedTime(null);
+      await loadAvailableSlots();
+    } catch (error) {
+      alert(error.response?.data?.detail || 'Erro ao agendar');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading) return <div className="p-8 text-center">Carregando...</div>;
+  if (!professional) return <div className="p-8 text-center">Profissional não encontrado</div>;
+
+  const svc = services.find(s => s.id === Number(selectedService));
+
+  return (
+    <div className="min-h-screen bg-white text-gray-900 flex items-start justify-center p-4">
+      <div className="w-full max-w-3xl shadow-lg rounded-2xl p-4 md:p-8 bg-white">
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 mx-auto rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-2xl mb-3">
+            {professional.name[0]}
+          </div>
+          <h1 className="text-2xl font-bold">Agende com {professional.name}</h1>
+          <p className="text-gray-600">Preencha os dados abaixo</p>
+        </div>
+
+        <div className="grid gap-4">
+          <input
+            className="w-full p-3 border rounded-lg"
+            placeholder="Seu nome completo"
+            value={clientName}
+            onChange={(e) => setClientName(e.target.value)}
+          />
+          <input
+            className="w-full p-3 border rounded-lg"
+            placeholder="Seu email"
+            type="email"
+            value={clientEmail}
+            onChange={(e) => setClientEmail(e.target.value)}
+          />
+          <input
+            className="w-full p-3 border rounded-lg"
+            placeholder="Seu telefone"
+            value={clientPhone}
+            onChange={(e) => setClientPhone(e.target.value)}
+          />
+
+          <div className="p-4 border rounded-lg">
+            <h4 className="font-semibold mb-2">Escolha o serviço</h4>
+            <div className="space-y-2">
+              {services.map((s) => (
+                <label key={s.id} className={`flex items-center justify-between p-2 rounded-md cursor-pointer ${s.id === Number(selectedService) ? 'bg-blue-50 border border-blue-100' : 'border'}`}>
+                  <div>
+                    <div className="font-medium">{s.name}</div>
+                    <div className="text-xs text-gray-500">{s.duration} min</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm">{formatBRL(s.price)}</div>
+                    <input type="radio" name="service" checked={s.id === Number(selectedService)} onChange={() => setSelectedService(s.id)} />
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="p-4 border rounded-lg relative">
+            <h4 className="font-semibold mb-2">Escolha a data</h4>
+            <button 
+              onClick={() => setShowCalendar(!showCalendar)}
+              className="w-full p-3 border rounded-lg text-left hover:bg-gray-50 flex items-center justify-between"
+            >
+              <span>{formatDateBR(selectedDate)}</span>
+              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </button>
+            {showCalendar && (
+              <div className="absolute z-10 mt-2 bg-white border rounded-lg shadow-lg p-2">
+                <DayPicker
+                  mode="single"
+                  selected={parseISO(selectedDate)}
+                  onSelect={(date) => {
+                    if (date) {
+                      setSelectedDate(format(date, 'yyyy-MM-dd'));
+                      setSelectedTime(null);
+                      setShowCalendar(false);
+                    }
+                  }}
+                  locale={ptBR}
+                  disabled={{ before: new Date() }}
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="p-4 border rounded-lg">
+            <h4 className="font-semibold mb-2">Horários disponíveis</h4>
+            <div className="grid grid-cols-4 gap-2">
+              {SLOTS.map((t) => {
+                const taken = bookedSlots.includes(t);
+                return (
+                  <button
+                    key={t}
+                    disabled={taken}
+                    onClick={() => setSelectedTime(t)}
+                    className={`p-2 text-xs rounded ${taken ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : selectedTime === t ? 'bg-blue-500 text-white' : 'border hover:bg-blue-50'}`}
+                  >
+                    {t}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="p-4 border rounded-lg bg-blue-50">
+            <h4 className="font-semibold">Resumo do Agendamento</h4>
+            <p className="text-sm">Serviço: {svc?.name}</p>
+            <p className="text-sm">Data: {formatDateBR(selectedDate)}</p>
+            <p className="text-sm">Horário: {selectedTime || '—'}</p>
+            <p className="text-sm">Valor: {svc ? formatBRL(svc.price) : '—'}</p>
+          </div>
+
+          <button 
+            onClick={handleBooking}
+            disabled={loading || !selectedTime}
+            className="w-full p-3 bg-blue-600 text-white rounded-lg font-semibold disabled:opacity-50 hover:bg-blue-700"
+          >
+            {loading ? 'Aguarde...' : 'Confirmar Agendamento'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function Header({ role, logout }) {
   return (
@@ -303,93 +476,120 @@ function Header({ role, logout }) {
         </div>
       </div>
       <div className="flex items-center gap-3">
-        {role && (
-          <button onClick={logout} className="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50">Sair</button>
-        )}
+        {role && <button onClick={logout} className="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50">Sair</button>}
       </div>
     </div>
   );
 }
 
-function Auth({ onLogin, loading }) {
+function Auth({ onAuth, loading, setLoading }) {
+  const [isLogin, setIsLogin] = useState(true);
+  const [role, setRole] = useState('client');
+  
+  // Login fields
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
+  
+  // Register fields - Client
   const [name, setName] = useState('');
-  const [asRole, setAsRole] = useState('client');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  
+  // Register fields - Professional
+  const [proName, setProName] = useState('');
+  const [proPassword, setProPassword] = useState('');
+
+  async function handleLogin() {
+    try {
+      setLoading(true);
+      const res = await axios.post(`${API}/auth/login`, { identifier, password, role });
+      onAuth(res.data);
+    } catch (error) {
+      alert(error.response?.data?.detail || 'Erro ao fazer login');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleRegister() {
+    try {
+      setLoading(true);
+      let res;
+      if (role === 'client') {
+        res = await axios.post(`${API}/auth/register/client`, { name, email, phone, password: regPassword });
+      } else {
+        res = await axios.post(`${API}/auth/register/professional`, { name: proName, password: proPassword });
+      }
+      onAuth(res.data);
+    } catch (error) {
+      alert(error.response?.data?.detail || 'Erro ao criar conta');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="grid gap-4">
       <div className="text-center">
         <h2 className="text-xl font-semibold">Bem-vindo ao AgendAI</h2>
-        <p className="text-sm text-gray-600">Escolha seu acesso: Cliente ou Profissional</p>
+        <p className="text-sm text-gray-600">{ isLogin ? 'Faça login' : 'Crie sua conta' }</p>
       </div>
-      <input
-        className="w-full p-3 border rounded-lg focus:outline-none"
-        placeholder="Seu nome (ex: João)"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        disabled={loading}
-      />
+
       <div className="flex gap-2">
-        <button
-          className={`flex-1 p-3 rounded-lg ${asRole === 'client' ? 'bg-blue-500 text-white' : 'border'}`}
-          onClick={() => setAsRole('client')}
-          disabled={loading}
-        >
-          Cliente
-        </button>
-        <button
-          className={`flex-1 p-3 rounded-lg ${asRole === 'pro' ? 'bg-blue-500 text-white' : 'border'}`}
-          onClick={() => setAsRole('pro')}
-          disabled={loading}
-        >
-          Profissional
-        </button>
+        <button className={`flex-1 p-3 rounded-lg ${role === 'client' ? 'bg-blue-500 text-white' : 'border'}`} onClick={() => setRole('client')}>Cliente</button>
+        <button className={`flex-1 p-3 rounded-lg ${role === 'pro' ? 'bg-blue-500 text-white' : 'border'}`} onClick={() => setRole('pro')}>Profissional</button>
       </div>
-      <button
-        onClick={() => onLogin(asRole, name)}
-        disabled={loading}
-        className="w-full p-3 rounded-lg bg-blue-600 text-white font-semibold disabled:opacity-50"
-      >
-        {loading ? 'Carregando...' : `Entrar como ${asRole === 'client' ? 'Cliente' : 'Profissional'}`}
+
+      {isLogin ? (
+        <div className="grid gap-3">
+          <input className="w-full p-3 border rounded-lg" placeholder={role === 'client' ? 'Email' : 'Nome'} value={identifier} onChange={(e) => setIdentifier(e.target.value)} disabled={loading} />
+          <input className="w-full p-3 border rounded-lg" placeholder="Senha" type="password" value={password} onChange={(e) => setPassword(e.target.value)} disabled={loading} />
+          <button onClick={handleLogin} disabled={loading} className="w-full p-3 rounded-lg bg-blue-600 text-white font-semibold disabled:opacity-50 hover:bg-blue-700">
+            {loading ? 'Entrando...' : 'Entrar'}
+          </button>
+        </div>
+      ) : (
+        <div className="grid gap-3">
+          {role === 'client' ? (
+            <>
+              <input className="w-full p-3 border rounded-lg" placeholder="Nome completo" value={name} onChange={(e) => setName(e.target.value)} disabled={loading} />
+              <input className="w-full p-3 border rounded-lg" placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={loading} />
+              <input className="w-full p-3 border rounded-lg" placeholder="Telefone" value={phone} onChange={(e) => setPhone(e.target.value)} disabled={loading} />
+              <input className="w-full p-3 border rounded-lg" placeholder="Senha" type="password" value={regPassword} onChange={(e) => setRegPassword(e.target.value)} disabled={loading} />
+            </>
+          ) : (
+            <>
+              <input className="w-full p-3 border rounded-lg" placeholder="Nome" value={proName} onChange={(e) => setProName(e.target.value)} disabled={loading} />
+              <input className="w-full p-3 border rounded-lg" placeholder="Senha" type="password" value={proPassword} onChange={(e) => setProPassword(e.target.value)} disabled={loading} />
+            </>
+          )}
+          <button onClick={handleRegister} disabled={loading} className="w-full p-3 rounded-lg bg-blue-600 text-white font-semibold disabled:opacity-50 hover:bg-blue-700">
+            {loading ? 'Criando...' : 'Criar Conta'}
+          </button>
+        </div>
+      )}
+
+      <button onClick={() => setIsLogin(!isLogin)} className="text-sm text-blue-600 hover:underline">
+        {isLogin ? 'Não tem conta? Cadastre-se' : 'Já tem conta? Faça login'}
       </button>
     </div>
   );
 }
 
 function ClientView({
-  userName,
-  services,
-  professionals,
-  selectedService,
-  setSelectedService,
-  selectedPro,
-  setSelectedPro,
-  selectedDate,
-  setSelectedDate,
-  selectedTime,
-  setSelectedTime,
-  SLOTS,
-  bookedSlots,
-  appointments,
-  bookAppointment,
-  formatBRL,
-  formatDateBR,
-  loading
+  userName, services, professionals, selectedService, setSelectedService,
+  selectedPro, setSelectedPro, selectedDate, setSelectedDate, selectedTime,
+  setSelectedTime, SLOTS, bookedSlots, appointments, bookAppointment,
+  formatBRL, formatDateBR, loading
 }) {
   const svc = services.find((s) => s.id === Number(selectedService));
   const [showCalendar, setShowCalendar] = useState(false);
-  
-  const handleDateSelect = (date) => {
-    if (date) {
-      const isoDate = format(date, 'yyyy-MM-dd');
-      setSelectedDate(isoDate);
-      setSelectedTime(null);
-      setShowCalendar(false);
-    }
-  };
 
   return (
     <div className="grid gap-6">
       <div className="text-center">
-        <h3 className="text-lg font-semibold">Olá, {userName || 'Cliente'}</h3>
+        <h3 className="text-lg font-semibold">Olá, {userName}</h3>
         <p className="text-sm text-gray-500">Faça seu agendamento de forma rápida</p>
       </div>
 
@@ -428,26 +628,13 @@ function ClientView({
       <div className="grid gap-4 md:grid-cols-2">
         <div className="p-4 border rounded-lg relative">
           <h4 className="font-semibold mb-2">Escolha a data</h4>
-          <button 
-            onClick={() => setShowCalendar(!showCalendar)}
-            className="w-full p-3 border rounded-lg text-left hover:bg-gray-50 flex items-center justify-between"
-          >
+          <button onClick={() => setShowCalendar(!showCalendar)} className="w-full p-3 border rounded-lg text-left hover:bg-gray-50 flex items-center justify-between">
             <span>{formatDateBR(selectedDate)}</span>
-            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
           </button>
-          
           {showCalendar && (
             <div className="absolute z-10 mt-2 bg-white border rounded-lg shadow-lg p-2">
-              <DayPicker
-                mode="single"
-                selected={parseISO(selectedDate)}
-                onSelect={handleDateSelect}
-                locale={ptBR}
-                disabled={{ before: new Date() }}
-                className="rdp-small"
-              />
+              <DayPicker mode="single" selected={parseISO(selectedDate)} onSelect={(date) => { if (date) { setSelectedDate(format(date, 'yyyy-MM-dd')); setSelectedTime(null); setShowCalendar(false); }}} locale={ptBR} disabled={{ before: new Date() }} />
             </div>
           )}
         </div>
@@ -457,22 +644,7 @@ function ClientView({
           <div className="grid grid-cols-4 gap-2 max-h-60 overflow-y-auto">
             {SLOTS.map((t) => {
               const taken = bookedSlots.includes(t);
-              return (
-                <button
-                  key={t}
-                  disabled={taken}
-                  onClick={() => setSelectedTime(t)}
-                  className={`p-2 text-xs rounded ${
-                    taken
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : selectedTime === t
-                      ? 'bg-blue-500 text-white'
-                      : 'border hover:bg-blue-50'
-                  }`}
-                >
-                  {t}
-                </button>
-              );
+              return <button key={t} disabled={taken} onClick={() => setSelectedTime(t)} className={`p-2 text-xs rounded ${taken ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : selectedTime === t ? 'bg-blue-500 text-white' : 'border hover:bg-blue-50'}`}>{t}</button>;
             })}
           </div>
         </div>
@@ -487,15 +659,8 @@ function ClientView({
           <p className="text-sm">Horário: {selectedTime || '—'}</p>
           <p className="text-sm">Valor: {svc ? formatBRL(svc.price) : '—'}</p>
         </div>
-
         <div className="w-full md:w-40">
-          <button 
-            onClick={bookAppointment} 
-            disabled={loading || !selectedTime}
-            className="w-full p-3 bg-blue-600 text-white rounded-lg font-semibold disabled:opacity-50 hover:bg-blue-700"
-          >
-            {loading ? 'Aguarde...' : 'Confirmar'}
-          </button>
+          <button onClick={bookAppointment} disabled={loading || !selectedTime} className="w-full p-3 bg-blue-600 text-white rounded-lg font-semibold disabled:opacity-50 hover:bg-blue-700">{loading ? 'Aguarde...' : 'Confirmar'}</button>
         </div>
       </div>
 
@@ -518,26 +683,16 @@ function ClientView({
   );
 }
 
-function ProfessionalView({ 
-  userName, 
-  services, 
-  updateService, 
-  appointments, 
-  professionals, 
-  monthlyReport, 
-  formatBRL, 
-  formatDateBR,
-  loading,
-  updateAppointmentStatus,
-  getAppointmentStatus
-}) {
+function ProfessionalView({ userName, userId, services, updateService, appointments, monthlyReport, formatBRL, formatDateBR, loading, updateAppointmentStatus, getAppointmentStatus }) {
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   });
-
   const [editingService, setEditingService] = useState(null);
   const [report, setReport] = useState(null);
+  const [showQR, setShowQR] = useState(false);
+
+  const bookingUrl = `${window.location.origin}/book/${userId}`;
 
   useEffect(() => {
     loadReport();
@@ -552,26 +707,18 @@ function ProfessionalView({
   const getStatusColor = (apt) => {
     const status = getAppointmentStatus(apt);
     switch(status) {
-      case 'completed':
-        return 'border-l-4 border-green-500 bg-green-50';
-      case 'cancelled':
-        return 'border-l-4 border-red-500 bg-red-50';
-      case 'pending':
-      default:
-        return 'border-l-4 border-blue-500 bg-blue-50';
+      case 'completed': return 'border-l-4 border-green-500 bg-green-50';
+      case 'cancelled': return 'border-l-4 border-red-500 bg-red-50';
+      default: return 'border-l-4 border-blue-500 bg-blue-50';
     }
   };
 
   const getStatusBadge = (apt) => {
     const status = getAppointmentStatus(apt);
     switch(status) {
-      case 'completed':
-        return <span className="text-xs px-2 py-1 rounded bg-green-100 text-green-700">Concluído</span>;
-      case 'cancelled':
-        return <span className="text-xs px-2 py-1 rounded bg-red-100 text-red-700">Cancelado</span>;
-      case 'pending':
-      default:
-        return <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700">Pendente</span>;
+      case 'completed': return <span className="text-xs px-2 py-1 rounded bg-green-100 text-green-700">Concluído</span>;
+      case 'cancelled': return <span className="text-xs px-2 py-1 rounded bg-red-100 text-red-700">Cancelado</span>;
+      default: return <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700">Pendente</span>;
     }
   };
 
@@ -579,7 +726,22 @@ function ProfessionalView({
     <div className="grid gap-6">
       <div className="text-center">
         <h3 className="text-lg font-semibold">Painel do Profissional</h3>
-        <p className="text-sm text-gray-500">{userName || 'Profissional'}</p>
+        <p className="text-sm text-gray-500">{userName}</p>
+      </div>
+
+      <div className="p-4 border-2 border-blue-200 rounded-lg bg-blue-50">
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="font-semibold">QR Code para Agendamento</h4>
+          <button onClick={() => setShowQR(!showQR)} className="text-sm px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">{showQR ? 'Ocultar' : 'Mostrar'} QR Code</button>
+        </div>
+        <p className="text-xs text-gray-600 mb-2">Compartilhe este QR Code para que clientes agendem diretamente com você</p>
+        {showQR && (
+          <div className="flex flex-col items-center gap-3 p-4 bg-white rounded">
+            <QRCodeSVG value={bookingUrl} size={200} />
+            <div className="text-xs text-center break-all max-w-full">{bookingUrl}</div>
+            <button onClick={() => navigator.clipboard.writeText(bookingUrl)} className="text-sm px-3 py-1 border rounded hover:bg-gray-50">Copiar Link</button>
+          </div>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -600,26 +762,12 @@ function ProfessionalView({
                     <div className="mt-1">{getStatusBadge(a)}</div>
                   </div>
                 </div>
-                <div className="flex gap-1 mt-2">
-                  {getAppointmentStatus(a) === 'pending' && (
-                    <>
-                      <button
-                        onClick={() => updateAppointmentStatus(a.id, 'completed')}
-                        className="text-xs px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600"
-                        disabled={loading}
-                      >
-                        Concluir
-                      </button>
-                      <button
-                        onClick={() => updateAppointmentStatus(a.id, 'cancelled')}
-                        className="text-xs px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-                        disabled={loading}
-                      >
-                        Cancelar
-                      </button>
-                    </>
-                  )}
-                </div>
+                {getAppointmentStatus(a) === 'pending' && (
+                  <div className="flex gap-1 mt-2">
+                    <button onClick={() => updateAppointmentStatus(a.id, 'completed')} className="text-xs px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600" disabled={loading}>Concluir</button>
+                    <button onClick={() => updateAppointmentStatus(a.id, 'cancelled')} className="text-xs px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600" disabled={loading}>Cancelar</button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -640,49 +788,16 @@ function ProfessionalView({
                 </div>
               </div>
             ))}
-
             {editingService && (
               <div className="mt-3 p-3 border rounded bg-gray-50">
                 <h5 className="font-medium">Editar {editingService.name}</h5>
                 <div className="mt-2 grid gap-2">
-                  <input 
-                    type="text" 
-                    className="p-2 border rounded" 
-                    value={editingService.name} 
-                    onChange={(e) => setEditingService({ ...editingService, name: e.target.value })} 
-                    placeholder="Nome do serviço"
-                  />
-                  <input 
-                    type="number" 
-                    className="p-2 border rounded" 
-                    value={editingService.price} 
-                    onChange={(e) => setEditingService({ ...editingService, price: Number(e.target.value) })} 
-                    placeholder="Preço"
-                  />
-                  <input 
-                    type="number" 
-                    className="p-2 border rounded" 
-                    value={editingService.duration} 
-                    onChange={(e) => setEditingService({ ...editingService, duration: Number(e.target.value) })} 
-                    placeholder="Duração (min)"
-                  />
+                  <input type="text" className="p-2 border rounded" value={editingService.name} onChange={(e) => setEditingService({ ...editingService, name: e.target.value })} placeholder="Nome do serviço" />
+                  <input type="number" className="p-2 border rounded" value={editingService.price} onChange={(e) => setEditingService({ ...editingService, price: Number(e.target.value) })} placeholder="Preço" />
+                  <input type="number" className="p-2 border rounded" value={editingService.duration} onChange={(e) => setEditingService({ ...editingService, duration: Number(e.target.value) })} placeholder="Duração (min)" />
                   <div className="flex gap-2">
-                    <button 
-                      onClick={() => { 
-                        updateService(editingService); 
-                        setEditingService(null); 
-                      }} 
-                      disabled={loading}
-                      className="px-3 py-2 bg-blue-600 text-white rounded disabled:opacity-50 hover:bg-blue-700"
-                    >
-                      Salvar
-                    </button>
-                    <button 
-                      onClick={() => setEditingService(null)} 
-                      className="px-3 py-2 border rounded hover:bg-gray-50"
-                    >
-                      Cancelar
-                    </button>
+                    <button onClick={() => { updateService(editingService); setEditingService(null); }} disabled={loading} className="px-3 py-2 bg-blue-600 text-white rounded disabled:opacity-50 hover:bg-blue-700">Salvar</button>
+                    <button onClick={() => setEditingService(null)} className="px-3 py-2 border rounded hover:bg-gray-50">Cancelar</button>
                   </div>
                 </div>
               </div>
@@ -694,36 +809,15 @@ function ProfessionalView({
       <div className="p-4 border rounded-lg">
         <h4 className="font-semibold mb-2">Relatório Mensal</h4>
         <div className="flex gap-2 items-center mb-3">
-          <input 
-            type="month" 
-            value={selectedMonth} 
-            onChange={(e) => setSelectedMonth(e.target.value)} 
-            className="p-2 border rounded" 
-          />
+          <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="p-2 border rounded" />
         </div>
         {report ? (
           <div className="grid gap-2">
-            <div className="p-3 border rounded bg-blue-50">
-              <div className="text-sm text-gray-600">Atendimentos Concluídos</div>
-              <div className="font-semibold text-xl">{report.totalAttendance}</div>
-            </div>
-            <div className="p-3 border rounded bg-green-50">
-              <div className="text-sm text-gray-600">Faturamento</div>
-              <div className="font-semibold text-xl">{formatBRL(report.totalRevenue)}</div>
-            </div>
-            <div className="p-3 border rounded">
-              <div className="text-sm text-gray-600 mb-2">Serviços mais realizados</div>
-              <ul className="list-disc pl-5">
-                {Object.entries(report.servicesCount).length === 0 && <li className="text-sm text-gray-500">Nenhum</li>}
-                {Object.entries(report.servicesCount).map(([name, cnt]) => (
-                  <li key={name} className="text-sm">{name} — {cnt}</li>
-                ))}
-              </ul>
-            </div>
+            <div className="p-3 border rounded bg-blue-50"><div className="text-sm text-gray-600">Atendimentos Concluídos</div><div className="font-semibold text-xl">{report.totalAttendance}</div></div>
+            <div className="p-3 border rounded bg-green-50"><div className="text-sm text-gray-600">Faturamento</div><div className="font-semibold text-xl">{formatBRL(report.totalRevenue)}</div></div>
+            <div className="p-3 border rounded"><div className="text-sm text-gray-600 mb-2">Serviços mais realizados</div><ul className="list-disc pl-5">{Object.entries(report.servicesCount).length === 0 && <li className="text-sm text-gray-500">Nenhum</li>}{Object.entries(report.servicesCount).map(([name, cnt]) => <li key={name} className="text-sm">{name} — {cnt}</li>)}</ul></div>
           </div>
-        ) : (
-          <p className="text-sm text-gray-500">Carregando...</p>
-        )}
+        ) : <p className="text-sm text-gray-500">Carregando...</p>}
       </div>
     </div>
   );
