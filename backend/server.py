@@ -255,6 +255,79 @@ async def login(request: LoginRequest):
     else:
         raise HTTPException(status_code=400, detail="Tipo de usuário inválido")
 
+@api_router.get("/clients/profile/{user_id}", response_model=UserProfile)
+async def get_client_profile(user_id: str):
+    """Get client profile"""
+    user = await db.clients.find_one({"id": user_id}, {"_id": 0, "password": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Cliente não encontrado")
+    
+    return UserProfile(
+        name=user["name"],
+        email=user.get("email"),
+        phone=user.get("phone"),
+        photo=user.get("photo"),
+        role="client"
+    )
+
+@api_router.put("/clients/profile/{user_id}")
+async def update_client_profile(user_id: str, update: ClientProfileUpdate):
+    """Update client profile"""
+    user = await db.clients.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Cliente não encontrado")
+    
+    update_data = {}
+    
+    # Update phone
+    if update.phone:
+        update_data["phone"] = update.phone
+    
+    # Update photo
+    if update.photo is not None:
+        update_data["photo"] = update.photo
+    
+    # Update password
+    if update.currentPassword and update.newPassword:
+        if not verify_password(update.currentPassword, user["password"]):
+            raise HTTPException(status_code=400, detail="Senha atual incorreta")
+        update_data["password"] = hash_password(update.newPassword)
+    
+    if update_data:
+        await db.clients.update_one({"id": user_id}, {"$set": update_data})
+    
+    return {"success": True, "message": "Perfil atualizado com sucesso"}
+
+@api_router.get("/professionals/profile/{user_id}")
+async def get_professional_profile(user_id: str):
+    """Get professional profile"""
+    user = await db.professionals.find_one({"id": int(user_id)}, {"_id": 0, "password": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Profissional não encontrado")
+    
+    return UserProfile(
+        name=user["name"],
+        photo=user.get("photo"),
+        role="pro"
+    )
+
+@api_router.put("/professionals/profile/{user_id}")
+async def update_professional_profile(user_id: str, update: ProfessionalProfileUpdate):
+    """Update professional profile"""
+    user = await db.professionals.find_one({"id": int(user_id)})
+    if not user:
+        raise HTTPException(status_code=404, detail="Profissional não encontrado")
+    
+    update_data = {}
+    
+    if update.photo is not None:
+        update_data["photo"] = update.photo
+    
+    if update_data:
+        await db.professionals.update_one({"id": int(user_id)}, {"$set": update_data})
+    
+    return {"success": True, "message": "Perfil atualizado com sucesso"}
+
 @api_router.get("/services", response_model=List[Service])
 async def get_services():
     """Get all services"""
