@@ -811,8 +811,20 @@ function ProfessionalView({ userName, userId, services, updateService, appointme
   const [editingService, setEditingService] = useState(null);
   const [report, setReport] = useState(null);
   const [showQR, setShowQR] = useState(false);
+  const [viewMode, setViewMode] = useState('month'); // 'day' or 'month'
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [dailyAppointments, setDailyAppointments] = useState([]);
 
   const bookingUrl = `${window.location.origin}/book/${userId}`;
+
+  // Filter appointments by selected date for day view
+  useEffect(() => {
+    if (viewMode === 'day' && selectedDate) {
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      const filtered = appointments.filter(a => a.date === dateStr);
+      setDailyAppointments(filtered);
+    }
+  }, [viewMode, selectedDate, appointments]);
 
   useEffect(() => {
     loadReport();
