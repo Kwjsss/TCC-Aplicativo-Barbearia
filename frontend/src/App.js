@@ -237,7 +237,7 @@ function MainApp() {
   return (
     <div className="min-h-screen bg-white text-gray-900 flex items-start justify-center p-4">
       <div className="w-full max-w-4xl shadow-lg rounded-2xl p-4 md:p-8 bg-white">
-        <Header role={role} logout={logout} />
+        <Header role={role} userName={userName} userPhoto={userPhoto} logout={logout} onSettings={() => setShowSettings(true)} />
 
         {!role && <Auth onAuth={handleAuth} loading={loading} setLoading={setLoading} />}
 
