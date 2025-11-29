@@ -99,6 +99,22 @@ class PublicBookingData(BaseModel):
     professional: Professional
     services: List[Service]
 
+class ClientProfileUpdate(BaseModel):
+    phone: Optional[str] = None
+    photo: Optional[str] = None
+    currentPassword: Optional[str] = None
+    newPassword: Optional[str] = None
+
+class ProfessionalProfileUpdate(BaseModel):
+    photo: Optional[str] = None
+
+class UserProfile(BaseModel):
+    name: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    photo: Optional[str] = None
+    role: str
+
 # -------------------- Helper Functions --------------------
 
 def hash_password(password: str) -> str:
