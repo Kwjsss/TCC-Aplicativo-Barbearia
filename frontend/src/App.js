@@ -8,6 +8,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Settings } from 'lucide-react';
 import ClientSettings from './components/ClientSettings';
 import ProfessionalSettings from './components/ProfessionalSettings';
+import CancelModal from './components/CancelModal';
 import 'react-day-picker/dist/style.css';
 import '@/App.css';
 
