@@ -960,6 +960,9 @@ function ProfessionalView({ userName, userId, services, updateService, appointme
                       </div>
                     )}
                     <div className="text-xs text-gray-600 mt-1">{services.find((s) => s.id === a.serviceId)?.name}</div>
+                    {a.cancellationReason && (
+                      <div className="text-xs text-red-600 mt-1 italic">Motivo: {a.cancellationReason}</div>
+                    )}
                   </div>
                   <div className="text-right">
                     <div className="text-sm font-semibold">{formatBRL(services.find((s) => s.id === a.serviceId)?.price || 0)}</div>
@@ -975,6 +978,7 @@ function ProfessionalView({ userName, userId, services, updateService, appointme
               </div>
             ))}
           </div>
+          )}
         </div>
 
         <div className="p-4 border rounded-lg">
