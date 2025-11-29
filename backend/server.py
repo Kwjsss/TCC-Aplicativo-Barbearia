@@ -1,15 +1,14 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, HTTPException
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict
-from typing import List
+from pydantic import BaseModel, Field
+from typing import List, Optional
+from datetime import datetime
 import uuid
-from datetime import datetime, timezone
-
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -25,46 +24,221 @@ app = FastAPI()
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
+# -------------------- Models --------------------
 
-# Define Models
-class StatusCheck(BaseModel):
-    model_config = ConfigDict(extra="ignore")  # Ignore MongoDB's _id field
-    
+class LoginRequest(BaseModel):
+    name: str
+    role: str  # 'client' or 'pro'
+
+class LoginResponse(BaseModel):
+    success: bool
+    userName: str
+    role: str
+
+class Service(BaseModel):
+    id: int
+    name: str
+    duration: int  # minutes
+    price: float
+
+class ServiceUpdate(BaseModel):
+    name: Optional[str] = None
+    duration: Optional[int] = None
+    price: Optional[float] = None
+
+class Professional(BaseModel):
+    id: int
+    name: str
+
+class AppointmentCreate(BaseModel):
+    client: str
+    proId: int
+    serviceId: int
+    date: str  # ISO format YYYY-MM-DD
+    time: str  # HH:MM
+
+class Appointment(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    client: str
+    proId: int
+    serviceId: int
+    date: str
+    time: str
 
-class StatusCheckCreate(BaseModel):
-    client_name: str
+class AvailableSlotsRequest(BaseModel):
+    date: str
+    proId: int
 
-# Add your routes to the router instead of directly to app
-@api_router.get("/")
-async def root():
-    return {"message": "Hello World"}
+class MonthlyReport(BaseModel):
+    totalAttendance: int
+    totalRevenue: float
+    servicesCount: dict
 
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.model_dump()
-    status_obj = StatusCheck(**status_dict)
-    
-    # Convert to dict and serialize datetime to ISO string for MongoDB
-    doc = status_obj.model_dump()
-    doc['timestamp'] = doc['timestamp'].isoformat()
-    
-    _ = await db.status_checks.insert_one(doc)
-    return status_obj
+# -------------------- Initialize Data --------------------
 
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    # Exclude MongoDB's _id field from the query results
-    status_checks = await db.status_checks.find({}, {"_id": 0}).to_list(1000)
+async def initialize_data():
+    """Initialize database with sample data if empty"""
     
-    # Convert ISO string timestamps back to datetime objects
-    for check in status_checks:
-        if isinstance(check['timestamp'], str):
-            check['timestamp'] = datetime.fromisoformat(check['timestamp'])
+    # Check if services exist
+    services_count = await db.services.count_documents({})
+    if services_count == 0:
+        services = [
+            {"id": 1, "name": "Corte Masculino", "duration": 30, "price": 35.0},
+            {"id": 2, "name": "Barba", "duration": 20, "price": 20.0},
+            {"id": 3, "name": "Corte + Barba", "duration": 50, "price": 50.0}
+        ]
+        await db.services.insert_many(services)
+        logging.info("Services initialized")
     
-    return status_checks
+    # Check if professionals exist
+    professionals_count = await db.professionals.count_documents({})
+    if professionals_count == 0:
+        professionals = [
+            {"id": 1, "name": "João"},
+            {"id": 2, "name": "Carlos"}
+        ]
+        await db.professionals.insert_many(professionals)
+        logging.info("Professionals initialized")
+
+@app.on_event("startup")
+async def startup_event():
+    await initialize_data()
+
+# -------------------- Routes --------------------
+
+@api_router.post("/auth/login", response_model=LoginResponse)
+async def login(request: LoginRequest):
+    """Simple login - just returns the user info"""
+    return LoginResponse(
+        success=True,
+        userName=request.name,
+        role=request.role
+    )
+
+@api_router.get("/services", response_model=List[Service])
+async def get_services():
+    """Get all services"""
+    services = await db.services.find({}, {"_id": 0}).to_list(100)
+    return services
+
+@api_router.put("/services/{service_id}", response_model=Service)
+async def update_service(service_id: int, update: ServiceUpdate):
+    """Update service details (for professionals)"""
+    service = await db.services.find_one({"id": service_id}, {"_id": 0})
+    if not service:
+        raise HTTPException(status_code=404, detail="Service not found")
+    
+    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+    
+    if update_data:
+        await db.services.update_one(
+            {"id": service_id},
+            {"$set": update_data}
+        )
+    
+    updated_service = await db.services.find_one({"id": service_id}, {"_id": 0})
+    return updated_service
+
+@api_router.get("/professionals", response_model=List[Professional])
+async def get_professionals():
+    """Get all professionals"""
+    professionals = await db.professionals.find({}, {"_id": 0}).to_list(100)
+    return professionals
+
+@api_router.post("/appointments", response_model=Appointment)
+async def create_appointment(appointment: AppointmentCreate):
+    """Create a new appointment"""
+    
+    # Check if slot is available
+    existing = await db.appointments.find_one({
+        "date": appointment.date,
+        "time": appointment.time,
+        "proId": appointment.proId
+    })
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="Time slot already booked")
+    
+    new_appointment = Appointment(**appointment.model_dump())
+    await db.appointments.insert_one(new_appointment.model_dump())
+    
+    return new_appointment
+
+@api_router.get("/appointments", response_model=List[Appointment])
+async def get_appointments(client: Optional[str] = None, proId: Optional[int] = None):
+    """Get appointments with optional filters"""
+    query = {}
+    if client:
+        query["client"] = client
+    if proId:
+        query["proId"] = proId
+    
+    appointments = await db.appointments.find(query, {"_id": 0}).to_list(1000)
+    return appointments
+
+@api_router.post("/appointments/available-slots")
+async def get_available_slots(request: AvailableSlotsRequest):
+    """Get available time slots for a specific date and professional"""
+    
+    # Get all appointments for this date and professional
+    booked = await db.appointments.find({
+        "date": request.date,
+        "proId": request.proId
+    }, {"_id": 0}).to_list(100)
+    
+    booked_times = [apt["time"] for apt in booked]
+    
+    # Generate all possible slots (09:00 - 18:00, 30-min intervals)
+    all_slots = []
+    for hour in range(9, 18):
+        for minute in [0, 30]:
+            time_str = f"{hour:02d}:{minute:02d}"
+            all_slots.append(time_str)
+    
+    available_slots = [slot for slot in all_slots if slot not in booked_times]
+    
+    return {"availableSlots": available_slots, "bookedSlots": booked_times}
+
+@api_router.get("/reports/monthly/{year}/{month}", response_model=MonthlyReport)
+async def get_monthly_report(year: int, month: int):
+    """Get monthly report for professionals"""
+    
+    # Get all appointments for the specified month
+    appointments = await db.appointments.find({}, {"_id": 0}).to_list(10000)
+    
+    # Filter by month/year
+    filtered = []
+    for apt in appointments:
+        try:
+            date_parts = apt["date"].split("-")
+            apt_year = int(date_parts[0])
+            apt_month = int(date_parts[1])
+            if apt_year == year and apt_month == month:
+                filtered.append(apt)
+        except:
+            continue
+    
+    total_attendance = len(filtered)
+    
+    # Calculate revenue
+    services = await db.services.find({}, {"_id": 0}).to_list(100)
+    services_dict = {s["id"]: s for s in services}
+    
+    total_revenue = 0.0
+    services_count = {}
+    
+    for apt in filtered:
+        service = services_dict.get(apt["serviceId"])
+        if service:
+            total_revenue += service["price"]
+            service_name = service["name"]
+            services_count[service_name] = services_count.get(service_name, 0) + 1
+    
+    return MonthlyReport(
+        totalAttendance=total_attendance,
+        totalRevenue=total_revenue,
+        servicesCount=services_count
+    )
 
 # Include the router in the main app
 app.include_router(api_router)
