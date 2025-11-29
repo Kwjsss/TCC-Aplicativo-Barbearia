@@ -395,6 +395,17 @@ function PublicBooking() {
   return (
     <div className="min-h-screen bg-white text-gray-900 flex items-start justify-center p-4">
       <div className="w-full max-w-3xl shadow-lg rounded-2xl p-4 md:p-8 bg-white">
+        <div className="flex items-center justify-center gap-3 mb-6">
+          <svg className="w-12 h-12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M19.5 8.5L14.5 3.5M14.5 3.5L9.5 8.5M14.5 3.5L4 14L3 21L10 20L20.5 9.5M9.5 15.5L8.5 14.5" stroke="#40BFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <circle cx="4" cy="20" r="1.5" fill="#40BFFF"/>
+            <circle cx="14.5" cy="3.5" r="1.5" fill="#40BFFF"/>
+          </svg>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-blue-400">AgendAI</h1>
+            <p className="text-xs text-gray-400 uppercase tracking-wider">Barbearia</p>
+          </div>
+        </div>
         <div className="text-center mb-6">
           <div className="w-16 h-16 mx-auto rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-2xl mb-3">
             {professional.name[0]}
