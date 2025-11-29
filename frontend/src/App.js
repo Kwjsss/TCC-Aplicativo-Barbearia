@@ -75,6 +75,7 @@ function MainApp() {
   const [role, setRole] = useState(null);
   const [userName, setUserName] = useState('');
   const [userId, setUserId] = useState('');
+  const [userPhoto, setUserPhoto] = useState('');
   const [services, setServices] = useState([]);
   const [professionals, setProfessionals] = useState([]);
   const [appointments, setAppointments] = useState([]);
@@ -84,6 +85,7 @@ function MainApp() {
   const [selectedDate, setSelectedDate] = useState(todayISO());
   const [selectedTime, setSelectedTime] = useState(null);
   const [bookedSlots, setBookedSlots] = useState([]);
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     loadServices();
