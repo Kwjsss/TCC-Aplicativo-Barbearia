@@ -547,9 +547,8 @@ function Header({ role, userName, userPhoto, logout, onSettings }) {
         </div>
       </div>
       <div className="w-full flex items-center justify-between">
-      <div className="flex items-center gap-3">
         {role && (
-          <>
+          <div className="flex items-center gap-3 ml-auto">
             <div className="flex items-center gap-2">
               {userPhoto ? (
                 <img src={userPhoto} alt={userName} className="w-8 h-8 rounded-full object-cover" onError={(e) => e.target.src = ''} />
@@ -564,7 +563,7 @@ function Header({ role, userName, userPhoto, logout, onSettings }) {
               <Settings className="w-4 h-4" />
             </button>
             <button onClick={logout} className="px-3 py-2 rounded-lg border border-gray-200 text-sm hover:bg-gray-50">Sair</button>
-          </>
+          </div>
         )}
       </div>
     </div>
