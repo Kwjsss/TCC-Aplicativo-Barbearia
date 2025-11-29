@@ -82,9 +82,13 @@ class Appointment(BaseModel):
     status: str = "pending"  # pending, completed, cancelled
     clientEmail: Optional[str] = None
     clientPhone: Optional[str] = None
+    cancellationReason: Optional[str] = None
 
 class AppointmentStatusUpdate(BaseModel):
     status: str  # pending, completed, cancelled
+
+class AppointmentCancelRequest(BaseModel):
+    reason: str
 
 class AvailableSlotsRequest(BaseModel):
     date: str
