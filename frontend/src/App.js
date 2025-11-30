@@ -830,7 +830,13 @@ function ProfessionalView({ userName, userId, services, updateService, appointme
     if (viewMode === 'day' && selectedDate) {
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
       const filtered = appointments.filter(a => a.date === dateStr);
-      setDailyAppointments(filtered);
+      // Sort by time descending (most recent first)
+      const sorted = filtered.sort((a, b) => {
+        const timeA = a.time || '00:00';
+        const timeB = b.time || '00:00';
+        return timeB.localeCompare(timeA);
+      });
+      setDailyAppointments(sorted);
     }
   }, [viewMode, selectedDate, appointments]);
 
