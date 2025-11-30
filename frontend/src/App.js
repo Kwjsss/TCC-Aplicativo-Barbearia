@@ -396,22 +396,13 @@ function PublicBooking() {
     <div className="min-h-screen bg-white text-gray-900 flex items-start justify-center p-4">
       <div className="w-full max-w-3xl shadow-lg rounded-2xl p-4 md:p-8 bg-white">
         <div className="flex items-center justify-center gap-3 mb-6">
-          <svg className="w-16 h-16" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-            {/* Lâmina esquerda */}
-            <path d="M 60 140 Q 50 110, 40 80 Q 35 60, 35 50 L 45 45 Q 50 60, 55 80 Q 65 110, 75 140 Z" fill="#40BFFF" stroke="#007BFF" strokeWidth="2"/>
-            {/* Lâmina direita */}
-            <path d="M 140 60 Q 110 50, 80 40 Q 60 35, 50 35 L 45 45 Q 60 50, 80 55 Q 110 65, 140 75 Z" fill="#40BFFF" stroke="#007BFF" strokeWidth="2"/>
-            {/* Argola esquerda */}
-            <circle cx="70" cy="150" r="18" fill="none" stroke="#40BFFF" strokeWidth="4"/>
-            <circle cx="70" cy="150" r="10" fill="#1A1D2E" stroke="#40BFFF" strokeWidth="2"/>
-            {/* Argola direita */}
-            <circle cx="150" cy="70" r="18" fill="none" stroke="#40BFFF" strokeWidth="4"/>
-            <circle cx="150" cy="70" r="10" fill="#1A1D2E" stroke="#40BFFF" strokeWidth="2"/>
-            {/* Ponto de junção */}
-            <circle cx="45" cy="45" r="6" fill="#007BFF"/>
-            {/* Detalhes das lâminas */}
-            <line x1="42" y1="75" x2="48" y2="75" stroke="#007BFF" strokeWidth="1.5"/>
-            <line x1="75" y1="42" x2="75" y2="48" stroke="#007BFF" strokeWidth="1.5"/>
+          <svg className="w-16 h-16" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M30 70 L20 80 Q18 82 20 84 L22 86 Q24 88 26 86 L36 76 L30 70Z" fill="#40BFFF" stroke="#007BFF" strokeWidth="2"/>
+            <path d="M70 30 L80 20 Q82 18 84 20 L86 22 Q88 24 86 26 L76 36 L70 30Z" fill="#40BFFF" stroke="#007BFF" strokeWidth="2"/>
+            <line x1="30" y1="70" x2="70" y2="30" stroke="#007BFF" strokeWidth="3"/>
+            <circle cx="50" cy="50" r="4" fill="#007BFF"/>
+            <circle cx="26" cy="82" r="8" fill="none" stroke="#40BFFF" strokeWidth="2.5"/>
+            <circle cx="82" cy="26" r="8" fill="none" stroke="#40BFFF" strokeWidth="2.5"/>
           </svg>
           <div className="text-center">
             <h1 className="text-3xl font-bold text-blue-400">AgendAI</h1>
