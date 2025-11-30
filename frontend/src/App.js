@@ -395,14 +395,28 @@ function PublicBooking() {
   return (
     <div className="min-h-screen bg-white text-gray-900 flex items-start justify-center p-4">
       <div className="w-full max-w-3xl shadow-lg rounded-2xl p-4 md:p-8 bg-white">
-        <div className="flex items-center justify-center gap-3 mb-6">
-          <svg className="w-16 h-16" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M30 70 L20 80 Q18 82 20 84 L22 86 Q24 88 26 86 L36 76 L30 70Z" fill="#40BFFF" stroke="#007BFF" strokeWidth="2"/>
-            <path d="M70 30 L80 20 Q82 18 84 20 L86 22 Q88 24 86 26 L76 36 L70 30Z" fill="#40BFFF" stroke="#007BFF" strokeWidth="2"/>
-            <line x1="30" y1="70" x2="70" y2="30" stroke="#007BFF" strokeWidth="3"/>
-            <circle cx="50" cy="50" r="4" fill="#007BFF"/>
-            <circle cx="26" cy="82" r="8" fill="none" stroke="#40BFFF" strokeWidth="2.5"/>
-            <circle cx="82" cy="26" r="8" fill="none" stroke="#40BFFF" strokeWidth="2.5"/>
+        <div className="flex items-center justify-center gap-4 mb-6">
+          <svg className="w-16 h-16" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            {/* Lâmina Superior */}
+            <path d="M 75 25 Q 80 30, 85 40 L 90 50 Q 92 54, 88 56 L 82 60 Q 78 58, 75 50 L 70 40 Q 68 32, 70 28 Z" 
+                  fill="#40BFFF" stroke="#007BFF" strokeWidth="2.5"/>
+            {/* Lâmina Inferior */}
+            <path d="M 25 75 Q 30 80, 40 85 L 50 90 Q 54 92, 56 88 L 60 82 Q 58 78, 50 75 L 40 70 Q 32 68, 28 70 Z" 
+                  fill="#40BFFF" stroke="#007BFF" strokeWidth="2.5"/>
+            {/* Linha de conexão */}
+            <line x1="60" y1="60" x2="75" y2="28" stroke="#007BFF" strokeWidth="4" strokeLinecap="round"/>
+            <line x1="60" y1="60" x2="28" y2="75" stroke="#007BFF" strokeWidth="4" strokeLinecap="round"/>
+            {/* Argola superior */}
+            <circle cx="88" cy="25" r="12" fill="none" stroke="#40BFFF" strokeWidth="3"/>
+            <circle cx="88" cy="25" r="6" fill="#1A1D2E" stroke="#40BFFF" strokeWidth="2"/>
+            {/* Argola inferior */}
+            <circle cx="25" cy="88" r="12" fill="none" stroke="#40BFFF" strokeWidth="3"/>
+            <circle cx="25" cy="88" r="6" fill="#1A1D2E" stroke="#40BFFF" strokeWidth="2"/>
+            {/* Ponto central */}
+            <circle cx="60" cy="60" r="5" fill="#007BFF"/>
+            {/* Detalhes */}
+            <line x1="75" y1="35" x2="80" y2="42" stroke="#007BFF" strokeWidth="1.5"/>
+            <line x1="35" y1="75" x2="42" y2="80" stroke="#007BFF" strokeWidth="1.5"/>
           </svg>
           <div className="text-center">
             <h1 className="text-3xl font-bold text-blue-400">AgendAI</h1>
