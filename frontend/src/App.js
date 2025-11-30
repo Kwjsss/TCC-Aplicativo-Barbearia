@@ -543,30 +543,9 @@ function PublicBooking() {
 function Header({ role, userName, userPhoto, logout, onSettings }) {
   return (
     <div className="mb-6">
-      <div className="flex items-center justify-center gap-3 mb-4">
-        <svg className="w-12 h-12" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-          {/* Lâmina Superior */}
-          <path d="M 70 35 Q 73 38, 76 44 L 79 52 Q 80 55, 77 57 L 73 60 Q 70 58, 68 52 L 65 44 Q 63 38, 65 35 Z" 
-                fill="#40BFFF" stroke="#007BFF" strokeWidth="2"/>
-          {/* Lâmina Inferior */}
-          <path d="M 35 70 Q 38 73, 44 76 L 52 79 Q 55 80, 57 77 L 60 73 Q 58 70, 52 68 L 44 65 Q 38 63, 35 65 Z" 
-                fill="#40BFFF" stroke="#007BFF" strokeWidth="2"/>
-          {/* Linha de conexão */}
-          <line x1="60" y1="60" x2="68" y2="35" stroke="#007BFF" strokeWidth="3" strokeLinecap="round"/>
-          <line x1="60" y1="60" x2="35" y2="68" stroke="#007BFF" strokeWidth="3" strokeLinecap="round"/>
-          {/* Argola superior */}
-          <circle cx="82" cy="28" r="10" fill="none" stroke="#40BFFF" strokeWidth="2.5"/>
-          <circle cx="82" cy="28" r="5" fill="#1A1D2E" stroke="#40BFFF" strokeWidth="1.5"/>
-          {/* Argola inferior */}
-          <circle cx="28" cy="82" r="10" fill="none" stroke="#40BFFF" strokeWidth="2.5"/>
-          <circle cx="28" cy="82" r="5" fill="#1A1D2E" stroke="#40BFFF" strokeWidth="1.5"/>
-          {/* Ponto central */}
-          <circle cx="60" cy="60" r="4" fill="#007BFF"/>
-        </svg>
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-blue-400">AgendAI</h1>
-          <p className="text-sm text-gray-400 uppercase tracking-wider">Barbearia</p>
-        </div>
+      <div className="text-center mb-4">
+        <h1 className="text-3xl font-bold text-blue-400">AgendAI</h1>
+        <p className="text-sm text-gray-400 uppercase tracking-wider">Barbearia</p>
       </div>
       {role && (
         <div className="flex items-center justify-end gap-3">
