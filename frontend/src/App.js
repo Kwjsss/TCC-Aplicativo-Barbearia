@@ -962,7 +962,15 @@ function ProfessionalView({ userName, userId, services, updateService, appointme
           ) : (
             <div className="space-y-2 max-h-96 overflow-y-auto">
             {appointments.length === 0 && <p className="text-sm text-gray-500">Sem agendamentos</p>}
-            {appointments.slice(0, 20).map((a) => (
+            {[...appointments]
+              .sort((a, b) => {
+                // Sort by date and time descending (most recent first)
+                const dateTimeA = `${a.date} ${a.time || '00:00'}`;
+                const dateTimeB = `${b.date} ${b.time || '00:00'}`;
+                return dateTimeB.localeCompare(dateTimeA);
+              })
+              .slice(0, 20)
+              .map((a) => (
               <div key={a.id} className={`flex flex-col p-3 rounded ${getStatusColor(a)}`}>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
