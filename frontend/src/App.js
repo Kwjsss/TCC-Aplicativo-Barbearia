@@ -606,21 +606,7 @@ function Auth({ onAuth, loading, setLoading }) {
 
   return (
     <div className="grid gap-4">
-      <div className="flex flex-col items-center justify-center mb-4">
-        <div className="flex items-center gap-3 mb-3">
-          <svg className="w-16 h-16" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M30 70 L20 80 Q18 82 20 84 L22 86 Q24 88 26 86 L36 76 L30 70Z" fill="#40BFFF" stroke="#007BFF" strokeWidth="2"/>
-            <path d="M70 30 L80 20 Q82 18 84 20 L86 22 Q88 24 86 26 L76 36 L70 30Z" fill="#40BFFF" stroke="#007BFF" strokeWidth="2"/>
-            <line x1="30" y1="70" x2="70" y2="30" stroke="#007BFF" strokeWidth="3"/>
-            <circle cx="50" cy="50" r="4" fill="#007BFF"/>
-            <circle cx="26" cy="82" r="8" fill="none" stroke="#40BFFF" strokeWidth="2.5"/>
-            <circle cx="82" cy="26" r="8" fill="none" stroke="#40BFFF" strokeWidth="2.5"/>
-          </svg>
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-blue-400">AgendAI</h1>
-            <p className="text-sm text-gray-400 uppercase tracking-wider">Barbearia</p>
-          </div>
-        </div>
+      <div className="text-center mb-4">
         <h2 className="text-xl font-semibold">Bem-vindo</h2>
         <p className="text-sm text-gray-600">{ isLogin ? 'Faça login' : 'Crie sua conta' }</p>
       </div>
