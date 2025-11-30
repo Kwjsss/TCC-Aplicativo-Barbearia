@@ -195,10 +195,10 @@ async def register_client(client: ClientRegister):
 async def register_professional(pro: ProfessionalRegister):
     """Register a new professional"""
     
-    # Check if name already exists
-    existing = await db.professionals.find_one({"name": pro.name})
+    # Check if email already exists
+    existing = await db.professionals.find_one({"email": pro.email})
     if existing:
-        raise HTTPException(status_code=400, detail="Nome já cadastrado")
+        raise HTTPException(status_code=400, detail="Email já cadastrado")
     
     # Get next ID
     max_pro = await db.professionals.find_one(sort=[("id", -1)])
@@ -208,6 +208,7 @@ async def register_professional(pro: ProfessionalRegister):
     pro_doc = {
         "id": next_id,
         "name": pro.name,
+        "email": pro.email,
         "password": hash_password(pro.password)
     }
     
