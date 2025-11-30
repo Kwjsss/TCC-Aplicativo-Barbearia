@@ -543,28 +543,25 @@ function PublicBooking() {
 function Header({ role, userName, userPhoto, logout, onSettings }) {
   return (
     <div className="mb-6">
-      <div className="flex items-center justify-center gap-4 mb-4">
-        <svg className="w-16 h-16" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <div className="flex items-center justify-center gap-3 mb-4">
+        <svg className="w-12 h-12" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
           {/* Lâmina Superior */}
-          <path d="M 75 25 Q 80 30, 85 40 L 90 50 Q 92 54, 88 56 L 82 60 Q 78 58, 75 50 L 70 40 Q 68 32, 70 28 Z" 
-                fill="#40BFFF" stroke="#007BFF" strokeWidth="2.5"/>
+          <path d="M 62 20 Q 66 24, 70 32 L 74 40 Q 75 43, 72 45 L 68 48 Q 65 46, 62 40 L 58 32 Q 56 26, 58 23 Z" 
+                fill="#40BFFF" stroke="#007BFF" strokeWidth="2"/>
           {/* Lâmina Inferior */}
-          <path d="M 25 75 Q 30 80, 40 85 L 50 90 Q 54 92, 56 88 L 60 82 Q 58 78, 50 75 L 40 70 Q 32 68, 28 70 Z" 
-                fill="#40BFFF" stroke="#007BFF" strokeWidth="2.5"/>
+          <path d="M 20 62 Q 24 66, 32 70 L 40 74 Q 43 75, 45 72 L 48 68 Q 46 65, 40 62 L 32 58 Q 26 56, 23 58 Z" 
+                fill="#40BFFF" stroke="#007BFF" strokeWidth="2"/>
           {/* Linha de conexão */}
-          <line x1="60" y1="60" x2="75" y2="28" stroke="#007BFF" strokeWidth="4" strokeLinecap="round"/>
-          <line x1="60" y1="60" x2="28" y2="75" stroke="#007BFF" strokeWidth="4" strokeLinecap="round"/>
+          <line x1="48" y1="48" x2="62" y2="23" stroke="#007BFF" strokeWidth="3" strokeLinecap="round"/>
+          <line x1="48" y1="48" x2="23" y2="62" stroke="#007BFF" strokeWidth="3" strokeLinecap="round"/>
           {/* Argola superior */}
-          <circle cx="88" cy="25" r="12" fill="none" stroke="#40BFFF" strokeWidth="3"/>
-          <circle cx="88" cy="25" r="6" fill="#1A1D2E" stroke="#40BFFF" strokeWidth="2"/>
+          <circle cx="73" cy="17" r="9" fill="none" stroke="#40BFFF" strokeWidth="2.5"/>
+          <circle cx="73" cy="17" r="4" fill="#1A1D2E" stroke="#40BFFF" strokeWidth="1.5"/>
           {/* Argola inferior */}
-          <circle cx="25" cy="88" r="12" fill="none" stroke="#40BFFF" strokeWidth="3"/>
-          <circle cx="25" cy="88" r="6" fill="#1A1D2E" stroke="#40BFFF" strokeWidth="2"/>
+          <circle cx="17" cy="73" r="9" fill="none" stroke="#40BFFF" strokeWidth="2.5"/>
+          <circle cx="17" cy="73" r="4" fill="#1A1D2E" stroke="#40BFFF" strokeWidth="1.5"/>
           {/* Ponto central */}
-          <circle cx="60" cy="60" r="5" fill="#007BFF"/>
-          {/* Detalhes */}
-          <line x1="75" y1="35" x2="80" y2="42" stroke="#007BFF" strokeWidth="1.5"/>
-          <line x1="35" y1="75" x2="42" y2="80" stroke="#007BFF" strokeWidth="1.5"/>
+          <circle cx="48" cy="48" r="4" fill="#007BFF"/>
         </svg>
         <div className="text-center">
           <h1 className="text-3xl font-bold text-blue-400">AgendAI</h1>
