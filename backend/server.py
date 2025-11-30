@@ -35,10 +35,11 @@ class ClientRegister(BaseModel):
 
 class ProfessionalRegister(BaseModel):
     name: str
+    email: str
     password: str
 
 class LoginRequest(BaseModel):
-    identifier: str  # email for client, name for professional
+    email: str
     password: str
     role: str  # 'client' or 'pro'
 
