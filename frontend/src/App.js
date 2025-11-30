@@ -631,28 +631,31 @@ function Auth({ onAuth, loading, setLoading }) {
 
   return (
     <div className="grid gap-4">
-      <div className="flex flex-col items-center justify-center mb-3">
-        <div className="flex items-center gap-3 mb-2">
-          <svg className="w-16 h-16" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <g transform="translate(32, 32)">
-              <line x1="-15" y1="15" x2="15" y2="-15" stroke="#40BFFF" strokeWidth="3" strokeLinecap="round"/>
-              <line x1="-15" y1="-15" x2="15" y2="15" stroke="#40BFFF" strokeWidth="3" strokeLinecap="round"/>
-              <circle cx="-15" cy="15" r="6" fill="none" stroke="#40BFFF" strokeWidth="2.5"/>
-              <circle cx="15" cy="-15" r="6" fill="none" stroke="#40BFFF" strokeWidth="2.5"/>
-              <circle cx="-15" cy="-15" r="6" fill="none" stroke="#40BFFF" strokeWidth="2.5"/>
-              <circle cx="15" cy="15" r="6" fill="none" stroke="#40BFFF" strokeWidth="2.5"/>
-              <circle cx="-15" cy="15" r="2" fill="#40BFFF"/>
-              <circle cx="15" cy="-15" r="2" fill="#40BFFF"/>
-              <circle cx="-15" cy="-15" r="2" fill="#40BFFF"/>
-              <circle cx="15" cy="15" r="2" fill="#40BFFF"/>
-            </g>
+      <div className="flex flex-col items-center justify-center mb-4">
+        <div className="flex items-center gap-3 mb-3">
+          <svg className="w-16 h-16" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            {/* Lâmina esquerda */}
+            <path d="M 60 140 Q 50 110, 40 80 Q 35 60, 35 50 L 45 45 Q 50 60, 55 80 Q 65 110, 75 140 Z" fill="#40BFFF" stroke="#007BFF" strokeWidth="2"/>
+            {/* Lâmina direita */}
+            <path d="M 140 60 Q 110 50, 80 40 Q 60 35, 50 35 L 45 45 Q 60 50, 80 55 Q 110 65, 140 75 Z" fill="#40BFFF" stroke="#007BFF" strokeWidth="2"/>
+            {/* Argola esquerda */}
+            <circle cx="70" cy="150" r="18" fill="none" stroke="#40BFFF" strokeWidth="4"/>
+            <circle cx="70" cy="150" r="10" fill="#1A1D2E" stroke="#40BFFF" strokeWidth="2"/>
+            {/* Argola direita */}
+            <circle cx="150" cy="70" r="18" fill="none" stroke="#40BFFF" strokeWidth="4"/>
+            <circle cx="150" cy="70" r="10" fill="#1A1D2E" stroke="#40BFFF" strokeWidth="2"/>
+            {/* Ponto de junção */}
+            <circle cx="45" cy="45" r="6" fill="#007BFF"/>
+            {/* Detalhes das lâminas */}
+            <line x1="42" y1="75" x2="48" y2="75" stroke="#007BFF" strokeWidth="1.5"/>
+            <line x1="75" y1="42" x2="75" y2="48" stroke="#007BFF" strokeWidth="1.5"/>
           </svg>
           <div className="text-center">
             <h1 className="text-3xl font-bold text-blue-400">AgendAI</h1>
             <p className="text-sm text-gray-400 uppercase tracking-wider">Barbearia</p>
           </div>
         </div>
-        <h2 className="text-xl font-semibold mt-2">Bem-vindo</h2>
+        <h2 className="text-xl font-semibold">Bem-vindo</h2>
         <p className="text-sm text-gray-600">{ isLogin ? 'Faça login' : 'Crie sua conta' }</p>
       </div>
 
