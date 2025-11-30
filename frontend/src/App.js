@@ -819,7 +819,7 @@ function ProfessionalView({ userName, userId, services, updateService, appointme
   const [editingService, setEditingService] = useState(null);
   const [report, setReport] = useState(null);
   const [showQR, setShowQR] = useState(false);
-  const [viewMode, setViewMode] = useState('month'); // 'day' or 'month'
+  const [viewMode, setViewMode] = useState('day'); // 'day' or 'month'
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [dailyAppointments, setDailyAppointments] = useState([]);
 
