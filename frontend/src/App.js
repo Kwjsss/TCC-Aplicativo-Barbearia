@@ -312,6 +312,7 @@ function MainApp() {
 // Public booking page
 function PublicBooking() {
   const { proId } = useParams();
+  const navigate = useNavigate();
   const [professional, setProfessional] = useState(null);
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
