@@ -403,6 +403,73 @@ async def get_public_booking_data(pro_id: int):
         services=[Service(**s) for s in services]
     )
 
+@api_router.post("/public/appointments", response_model=PublicAppointmentResponse)
+async def create_public_appointment(appointment: PublicAppointmentCreate):
+    """
+    Create appointment from public booking page (QR Code)
+    Auto-creates/logs in client and returns login credentials
+    """
+    
+    # Check if slot is available
+    existing = await db.appointments.find_one({
+        "date": appointment.date,
+        "time": appointment.time,
+        "proId": appointment.proId,
+        "status": {"$ne": "cancelled"}
+    })
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="Horário já reservado")
+    
+    # Check if client exists by email
+    client = await db.clients.find_one({"email": appointment.clientEmail})
+    
+    if client:
+        # Client exists - use existing data
+        client_id = client["id"]
+        client_name = client["name"]
+    else:
+        # Create new client with auto-generated password
+        client_id = str(uuid.uuid4())
+        auto_password = str(uuid.uuid4())[:8]  # Simple auto password
+        
+        new_client = {
+            "id": client_id,
+            "name": appointment.clientName,
+            "email": appointment.clientEmail,
+            "phone": appointment.clientPhone,
+            "password": hash_password(auto_password)
+        }
+        
+        await db.clients.insert_one(new_client)
+        client_name = appointment.clientName
+    
+    # Create appointment
+    new_appointment = Appointment(
+        client=client_name,
+        proId=appointment.proId,
+        serviceId=appointment.serviceId,
+        date=appointment.date,
+        time=appointment.time,
+        status="pending",
+        clientEmail=appointment.clientEmail,
+        clientPhone=appointment.clientPhone
+    )
+    
+    await db.appointments.insert_one(new_appointment.model_dump())
+    
+    # Return appointment with auto-login
+    return PublicAppointmentResponse(
+        success=True,
+        appointment=new_appointment,
+        login=LoginResponse(
+            success=True,
+            userName=client_name,
+            role="client",
+            userId=client_id
+        )
+    )
+
 @api_router.post("/appointments", response_model=Appointment)
 async def create_appointment(appointment: AppointmentCreate):
     """Create a new appointment"""
