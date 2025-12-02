@@ -366,21 +366,26 @@ function PublicBooking() {
 
     try {
       setLoading(true);
-      await axios.post(`${API}/appointments`, {
-        client: clientName,
+      const response = await axios.post(`${API}/public/appointments`, {
+        clientName,
+        clientEmail,
+        clientPhone,
         proId: Number(proId),
         serviceId: Number(selectedService),
         date: selectedDate,
-        time: selectedTime,
-        clientEmail,
-        clientPhone
+        time: selectedTime
       });
-      alert('Agendamento confirmado! Entraremos em contato.');
-      setClientName('');
-      setClientEmail('');
-      setClientPhone('');
-      setSelectedTime(null);
-      await loadAvailableSlots();
+      
+      // Auto-login with returned credentials
+      const loginData = response.data.login;
+      
+      // Show success message
+      alert('Agendamento confirmado! Redirecionando para seus agendamentos...');
+      
+      // Redirect to main app with login state
+      // We'll use URL params to pass login data
+      window.location.href = `/?autoLogin=true&userId=${loginData.userId}&userName=${encodeURIComponent(loginData.userName)}&role=${loginData.role}`;
+      
     } catch (error) {
       alert(error.response?.data?.detail || 'Erro ao agendar');
     } finally {
