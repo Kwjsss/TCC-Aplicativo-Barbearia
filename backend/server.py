@@ -105,6 +105,20 @@ class PublicBookingData(BaseModel):
     professional: Professional
     services: List[Service]
 
+class PublicAppointmentCreate(BaseModel):
+    clientName: str
+    clientEmail: str
+    clientPhone: str
+    proId: int
+    serviceId: int
+    date: str
+    time: str
+
+class PublicAppointmentResponse(BaseModel):
+    success: bool
+    appointment: Appointment
+    login: LoginResponse  # Auto-login after booking
+
 class ClientProfileUpdate(BaseModel):
     phone: Optional[str] = None
     photo: Optional[str] = None
