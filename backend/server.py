@@ -161,6 +161,13 @@ async def initialize_data():
 @app.on_event("startup")
 async def startup_event():
     await initialize_data()
+    start_scheduler()
+    logging.info("Reminder scheduler started")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    stop_scheduler()
+    logging.info("Reminder scheduler stopped")
 
 # -------------------- Routes --------------------
 
