@@ -91,6 +91,23 @@ function MainApp() {
   useEffect(() => {
     loadServices();
     loadProfessionals();
+    
+    // Check for auto-login from URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('autoLogin') === 'true') {
+      const autoUserId = urlParams.get('userId');
+      const autoUserName = urlParams.get('userName');
+      const autoRole = urlParams.get('role');
+      
+      if (autoUserId && autoUserName && autoRole) {
+        setUserId(autoUserId);
+        setUserName(decodeURIComponent(autoUserName));
+        setRole(autoRole);
+        
+        // Clear URL params
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
   }, []);
 
   useEffect(() => {
