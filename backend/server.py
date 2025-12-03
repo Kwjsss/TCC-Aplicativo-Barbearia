@@ -359,7 +359,7 @@ async def update_professional_profile(user_id: str, update: ProfessionalProfileU
 @api_router.get("/services", response_model=List[Service])
 async def get_services():
     """Get all services"""
-    services = await db.services.find({}, {"_id": 0}).to_list(100)
+    services = await db.services.find({}, {"_id": 0}).limit(100).to_list(100)
     return services
 
 @api_router.put("/services/{service_id}", response_model=Service)
