@@ -535,7 +535,24 @@ async def get_appointments(client: Optional[str] = None, proId: Optional[int] = 
     if proId:
         query["proId"] = proId
     
-    appointments = await db.appointments.find(query, {"_id": 0}).to_list(1000)
+    # Optimized: only fetch required fields, add limit, sort by date
+    appointments = await db.appointments.find(
+        query, 
+        {
+            "_id": 0, 
+            "id": 1, 
+            "client": 1, 
+            "proId": 1, 
+            "serviceId": 1, 
+            "date": 1, 
+            "time": 1, 
+            "status": 1, 
+            "clientEmail": 1, 
+            "clientPhone": 1, 
+            "cancellationReason": 1,
+            "reminder_sent": 1
+        }
+    ).sort([("date", -1), ("time", -1)]).limit(200).to_list(200)
     
     # Add status field if it doesn't exist (for old appointments)
     for apt in appointments:
