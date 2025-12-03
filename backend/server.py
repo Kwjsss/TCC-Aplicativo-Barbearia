@@ -419,7 +419,7 @@ async def delete_service(service_id: int):
 @api_router.get("/professionals", response_model=List[Professional])
 async def get_professionals():
     """Get all professionals (without passwords)"""
-    professionals = await db.professionals.find({}, {"_id": 0, "password": 0}).to_list(100)
+    professionals = await db.professionals.find({}, {"_id": 0, "password": 0}).limit(100).to_list(100)
     return professionals
 
 @api_router.get("/public/book/{pro_id}", response_model=PublicBookingData)
