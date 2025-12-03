@@ -1027,30 +1027,91 @@ function ProfessionalView({ userName, userId, services, updateService, appointme
         </div>
 
         <div className="p-4 border rounded-lg">
-          <h4 className="font-semibold mb-2">Serviços</h4>
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="font-semibold">Serviços</h4>
+            <button 
+              onClick={() => setEditingService({ id: null, name: '', price: 0, duration: 30 })} 
+              className="text-xs px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
+            >
+              + Adicionar Serviço
+            </button>
+          </div>
           <div className="space-y-2">
             {services.map((s) => (
               <div key={s.id} className="flex items-center justify-between p-2 border rounded">
                 <div>
                   <div className="font-medium">{s.name}</div>
-                  <div className="text-xs text-gray-500">{s.duration} min</div>
+                  <div className="text-xs text-gray-500">{s.duration} min • {formatBRL(s.price)}</div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="text-sm">{formatBRL(s.price)}</div>
                   <button onClick={() => setEditingService(s)} className="text-xs px-2 py-1 border rounded hover:bg-gray-50">Editar</button>
+                  <button 
+                    onClick={() => deleteService(s.id)} 
+                    className="text-xs px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                  >
+                    Excluir
+                  </button>
                 </div>
               </div>
             ))}
             {editingService && (
               <div className="mt-3 p-3 border rounded bg-gray-50">
-                <h5 className="font-medium">Editar {editingService.name}</h5>
-                <div className="mt-2 grid gap-2">
-                  <input type="text" className="p-2 border rounded" value={editingService.name} onChange={(e) => setEditingService({ ...editingService, name: e.target.value })} placeholder="Nome do serviço" />
-                  <input type="number" className="p-2 border rounded" value={editingService.price} onChange={(e) => setEditingService({ ...editingService, price: Number(e.target.value) })} placeholder="Preço" />
-                  <input type="number" className="p-2 border rounded" value={editingService.duration} onChange={(e) => setEditingService({ ...editingService, duration: Number(e.target.value) })} placeholder="Duração (min)" />
-                  <div className="flex gap-2">
-                    <button onClick={() => { updateService(editingService); setEditingService(null); }} disabled={loading} className="px-3 py-2 bg-blue-600 text-white rounded disabled:opacity-50 hover:bg-blue-700">Salvar</button>
-                    <button onClick={() => setEditingService(null)} className="px-3 py-2 border rounded hover:bg-gray-50">Cancelar</button>
+                <h5 className="font-medium mb-2">
+                  {editingService.id ? `Editar ${editingService.name}` : 'Novo Serviço'}
+                </h5>
+                <div className="grid gap-2">
+                  <div>
+                    <label className="text-xs text-gray-600">Nome do Serviço</label>
+                    <input 
+                      type="text" 
+                      className="w-full p-2 border rounded" 
+                      value={editingService.name} 
+                      onChange={(e) => setEditingService({ ...editingService, name: e.target.value })} 
+                      placeholder="Ex: Corte Masculino" 
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-600">Duração (minutos)</label>
+                    <input 
+                      type="number" 
+                      className="w-full p-2 border rounded" 
+                      value={editingService.duration} 
+                      onChange={(e) => setEditingService({ ...editingService, duration: Number(e.target.value) })} 
+                      placeholder="30" 
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-600">Preço (R$)</label>
+                    <input 
+                      type="number" 
+                      step="0.01"
+                      className="w-full p-2 border rounded" 
+                      value={editingService.price} 
+                      onChange={(e) => setEditingService({ ...editingService, price: Number(e.target.value) })} 
+                      placeholder="0.00" 
+                    />
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    <button 
+                      onClick={() => {
+                        if (editingService.id) {
+                          updateService(editingService);
+                        } else {
+                          createService(editingService);
+                        }
+                        setEditingService(null);
+                      }} 
+                      disabled={loading || !editingService.name} 
+                      className="px-3 py-2 bg-blue-600 text-white rounded disabled:opacity-50 hover:bg-blue-700"
+                    >
+                      {editingService.id ? 'Salvar' : 'Criar'}
+                    </button>
+                    <button 
+                      onClick={() => setEditingService(null)} 
+                      className="px-3 py-2 border rounded hover:bg-gray-50"
+                    >
+                      Cancelar
+                    </button>
                   </div>
                 </div>
               </div>
