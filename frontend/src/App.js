@@ -239,8 +239,43 @@ function MainApp() {
         price: updated.price
       });
       await loadServices();
+      alert('Serviço atualizado com sucesso!');
     } catch (error) {
       alert('Erro ao atualizar serviço');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function createService(newService) {
+    try {
+      setLoading(true);
+      await axios.post(`${API}/services`, {
+        name: newService.name,
+        duration: newService.duration,
+        price: newService.price
+      });
+      await loadServices();
+      alert('Serviço criado com sucesso!');
+    } catch (error) {
+      alert('Erro ao criar serviço');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function deleteService(serviceId) {
+    if (!window.confirm('Tem certeza que deseja excluir este serviço?')) {
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      await axios.delete(`${API}/services/${serviceId}`);
+      await loadServices();
+      alert('Serviço excluído com sucesso!');
+    } catch (error) {
+      alert(error.response?.data?.detail || 'Erro ao excluir serviço');
     } finally {
       setLoading(false);
     }
