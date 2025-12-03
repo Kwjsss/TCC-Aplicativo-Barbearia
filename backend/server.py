@@ -648,26 +648,31 @@ async def get_available_slots(request: AvailableSlotsRequest):
 async def get_monthly_report(year: int, month: int):
     """Get monthly report for professionals"""
     
-    # Get all appointments for the specified month
-    appointments = await db.appointments.find({}, {"_id": 0}).to_list(10000)
+    # Build date range for the specific month
+    start_date = f"{year}-{month:02d}-01"
     
-    # Filter by month/year and only count completed appointments
-    filtered = []
-    for apt in appointments:
-        try:
-            date_parts = apt["date"].split("-")
-            apt_year = int(date_parts[0])
-            apt_month = int(date_parts[1])
-            status = apt.get("status", "pending")
-            if apt_year == year and apt_month == month and status == "completed":
-                filtered.append(apt)
-        except:
-            continue
+    # Calculate end date (first day of next month)
+    if month == 12:
+        end_date = f"{year + 1}-01-01"
+    else:
+        end_date = f"{year}-{month + 1:02d}-01"
+    
+    # Optimized: Query only completed appointments in the target month with projection
+    filtered = await db.appointments.find(
+        {
+            "date": {"$gte": start_date, "$lt": end_date},
+            "status": "completed"
+        },
+        {"_id": 0, "serviceId": 1, "date": 1}
+    ).to_list(1000)
     
     total_attendance = len(filtered)
     
-    # Calculate revenue
-    services = await db.services.find({}, {"_id": 0}).to_list(100)
+    # Calculate revenue - fetch only required service fields
+    services = await db.services.find(
+        {}, 
+        {"_id": 0, "id": 1, "name": 1, "price": 1}
+    ).to_list(100)
     services_dict = {s["id"]: s for s in services}
     
     total_revenue = 0.0
