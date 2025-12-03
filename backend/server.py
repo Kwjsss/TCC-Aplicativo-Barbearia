@@ -380,6 +380,42 @@ async def update_service(service_id: int, update: ServiceUpdate):
     updated_service = await db.services.find_one({"id": service_id}, {"_id": 0})
     return updated_service
 
+@api_router.post("/services", response_model=Service)
+async def create_service(service: ServiceUpdate):
+    """Create a new service"""
+    # Get the next ID
+    max_service = await db.services.find_one(sort=[("id", -1)])
+    next_id = (max_service["id"] + 1) if max_service else 1
+    
+    new_service = {
+        "id": next_id,
+        "name": service.name or "Novo Serviço",
+        "duration": service.duration or 30,
+        "price": service.price or 0.0
+    }
+    
+    await db.services.insert_one(new_service)
+    
+    return Service(**new_service)
+
+@api_router.delete("/services/{service_id}")
+async def delete_service(service_id: int):
+    """Delete a service"""
+    # Check if service is being used in any appointments
+    appointments_using = await db.appointments.find_one({"serviceId": service_id})
+    if appointments_using:
+        raise HTTPException(
+            status_code=400, 
+            detail="Não é possível excluir um serviço que possui agendamentos"
+        )
+    
+    result = await db.services.delete_one({"id": service_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Serviço não encontrado")
+    
+    return {"success": True, "message": "Serviço excluído com sucesso"}
+
 @api_router.get("/professionals", response_model=List[Professional])
 async def get_professionals():
     """Get all professionals (without passwords)"""
