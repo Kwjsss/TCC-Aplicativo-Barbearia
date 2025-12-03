@@ -7,8 +7,14 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import asyncio
 from email_service import send_appointment_reminder
+from dotenv import load_dotenv
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+# Load environment variables
+ROOT_DIR = Path(__file__).parent
+load_dotenv(ROOT_DIR / '.env')
 
 # Scheduler instance
 scheduler = BackgroundScheduler()
