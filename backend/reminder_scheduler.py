@@ -49,11 +49,24 @@ async def check_and_send_reminders():
         window_start = target_minutes - 5
         window_end = target_minutes + 5
         
-        # Get all pending appointments for today
-        appointments = await db.appointments.find({
-            "date": target_date,
-            "status": "pending"
-        }, {"_id": 0}).to_list(None)
+        # Get all pending appointments for today - optimized with projection and limit
+        appointments = await db.appointments.find(
+            {
+                "date": target_date,
+                "status": "pending"
+            }, 
+            {
+                "_id": 0, 
+                "id": 1, 
+                "time": 1, 
+                "client": 1, 
+                "clientEmail": 1, 
+                "serviceId": 1, 
+                "proId": 1, 
+                "reminder_sent": 1,
+                "date": 1
+            }
+        ).limit(500).to_list(500)
         
         for appointment in appointments:
             try:
