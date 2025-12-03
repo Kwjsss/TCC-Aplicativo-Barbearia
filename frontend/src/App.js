@@ -339,6 +339,8 @@ function MainApp() {
             userId={userId}
             services={services}
             updateService={updateService}
+            createService={createService}
+            deleteService={deleteService}
             appointments={appointments}
             monthlyReport={monthlyReport}
             formatBRL={formatBRL}
