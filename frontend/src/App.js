@@ -871,7 +871,7 @@ function ClientView({
   );
 }
 
-function ProfessionalView({ userName, userId, services, updateService, appointments, monthlyReport, formatBRL, formatDateBR, loading, updateAppointmentStatus, getAppointmentStatus }) {
+function ProfessionalView({ userName, userId, services, updateService, createService, deleteService, appointments, monthlyReport, formatBRL, formatDateBR, loading, updateAppointmentStatus, getAppointmentStatus }) {
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
